@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import ArabicReshaper from 'arabic-reshaper';
 import type { Voter, MatrixRow } from '@/types/voter';
 
 const AMIRI_FONT_URL = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/amiri/Amiri-Regular.ttf';
@@ -26,29 +27,41 @@ function setupArabicFont(doc: jsPDF, fontBase64: string) {
   doc.setLanguage('ar');
 }
 
+/** Reshape Arabic text and reverse for RTL display in PDF */
+function reshapeArabic(text: string): string {
+  if (!text) return text;
+  // Check if text contains Arabic characters
+  if (/[\u0600-\u06FF]/.test(text)) {
+    const reshaped = ArabicReshaper.convertArabic(text);
+    // Reverse the string for RTL display in LTR PDF context
+    return reshaped.split('').reverse().join('');
+  }
+  return text;
+}
+
 export async function generateVoterPDF(voters: Voter[], title: string) {
   const fontBase64 = await loadArabicFont();
   const doc = new jsPDF({ orientation: 'landscape' });
   setupArabicFont(doc, fontBase64);
 
   doc.setFontSize(16);
-  doc.text(title, doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+  doc.text(reshapeArabic(title), doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
   doc.setFontSize(10);
   doc.text(`Total: ${voters.length}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
 
   autoTable(doc, {
     startY: 28,
-    head: [['#', 'CIN', 'الاسم العائلي', 'الاسم الشخصي', 'الجنس', 'الجماعة', 'الدائرة', 'مكتب التصويت', 'عنوان مكتب التصويت']],
+    head: [['#', 'CIN', reshapeArabic('الاسم العائلي'), reshapeArabic('الاسم الشخصي'), reshapeArabic('الجنس'), reshapeArabic('الجماعة'), reshapeArabic('الدائرة'), reshapeArabic('مكتب التصويت'), reshapeArabic('عنوان مكتب التصويت')]],
     body: voters.map((v, i) => [
       i + 1,
       v.cin,
-      v.lastName,
-      v.firstName,
-      v.gender,
-      v.commune,
-      v.circonscription,
-      v.bvName,
-      v.bvAddress,
+      reshapeArabic(v.lastName),
+      reshapeArabic(v.firstName),
+      reshapeArabic(v.gender),
+      reshapeArabic(v.commune),
+      reshapeArabic(v.circonscription),
+      reshapeArabic(v.bvName),
+      reshapeArabic(v.bvAddress),
     ]),
     styles: { fontSize: 8, cellPadding: 2, font: 'Amiri', halign: 'right' },
     headStyles: { fillColor: [41, 121, 204], font: 'Amiri', fontStyle: 'normal', halign: 'right' },
@@ -85,22 +98,22 @@ export async function generateMatrixPDF(voters: Voter[]) {
   });
 
   // Header row 1: الجماعة + circonscriptions merged + المجموع
-  const headerRow1: any[] = [{ content: 'الجماعة', rowSpan: 2, styles: { halign: 'right', fillColor: [41, 121, 204], textColor: [255, 255, 255], font: 'Amiri', fontStyle: 'normal' } }];
+  const headerRow1: any[] = [{ content: reshapeArabic('الجماعة'), rowSpan: 2, styles: { halign: 'right', fillColor: [41, 121, 204], textColor: [255, 255, 255], font: 'Amiri', fontStyle: 'normal' } }];
   circonsKeys.forEach((c) => {
     const span = circBvMap.get(c)!.size;
-    headerRow1.push({ content: c, colSpan: span, styles: { halign: 'center', fillColor: [41, 121, 204], textColor: [255, 255, 255], font: 'Amiri', fontStyle: 'normal' } });
+    headerRow1.push({ content: reshapeArabic(c), colSpan: span, styles: { halign: 'center', fillColor: [41, 121, 204], textColor: [255, 255, 255], font: 'Amiri', fontStyle: 'normal' } });
   });
-  headerRow1.push({ content: 'المجموع', rowSpan: 2, styles: { halign: 'center', fillColor: [41, 121, 204], textColor: [255, 255, 255], font: 'Amiri', fontStyle: 'normal' } });
+  headerRow1.push({ content: reshapeArabic('المجموع'), rowSpan: 2, styles: { halign: 'center', fillColor: [41, 121, 204], textColor: [255, 255, 255], font: 'Amiri', fontStyle: 'normal' } });
 
   // Header row 2: BV names
   const headerRow2: any[] = bvList.map((bv) => ({
-    content: bv.name,
+    content: reshapeArabic(bv.name),
     styles: { halign: 'center', fillColor: [60, 140, 220], textColor: [255, 255, 255], font: 'Amiri', fontStyle: 'normal', fontSize: 7 },
   }));
 
   // Body rows
   const body = communes.map((com) => {
-    const row: any[] = [com];
+    const row: any[] = [reshapeArabic(com)];
     let rowTotal = 0;
     bvList.forEach((bv) => {
       const val = cellMap.get(`${com}||${bv.circons}||${bv.name}`) || 0;
@@ -112,7 +125,7 @@ export async function generateMatrixPDF(voters: Voter[]) {
   });
 
   // Footer row
-  const footRow: any[] = ['المجموع'];
+  const footRow: any[] = [reshapeArabic('المجموع')];
   bvList.forEach((bv) => {
     let t = 0;
     communes.forEach((com) => { t += cellMap.get(`${com}||${bv.circons}||${bv.name}`) || 0; });
@@ -121,7 +134,7 @@ export async function generateMatrixPDF(voters: Voter[]) {
   footRow.push(voters.length);
 
   doc.setFontSize(16);
-  doc.text('حالة المصفوفة - عدد الناخبين', doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+  doc.text(reshapeArabic('حالة المصفوفة - عدد الناخبين'), doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
 
   autoTable(doc, {
     startY: 25,
