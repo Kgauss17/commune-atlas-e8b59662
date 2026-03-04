@@ -125,7 +125,7 @@ const Index = () => {
                 <VoterTable voters={filtered} />
               </TabsContent>
               <TabsContent value="matrix" className="mt-4">
-                <MatrixView data={matrix} />
+                <MatrixView voters={filtered} />
               </TabsContent>
               <TabsContent value="charts" className="mt-4">
                 <ChartsView voters={filtered} />
