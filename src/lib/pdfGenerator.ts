@@ -230,3 +230,56 @@ export async function generateMatrixPDF(voters: Voter[]) {
 
   doc.save('etat_matrice.pdf');
 }
+
+export async function generateDuplicatesPDF(voters: Voter[]) {
+  const fontBase64 = await loadArabicFont();
+  const doc = new jsPDF({ orientation: 'landscape' });
+  setupArabicFont(doc, fontBase64);
+
+  // Find duplicates
+  const cinMap = new Map<string, Voter[]>();
+  voters.forEach((v) => {
+    if (!v.cin) return;
+    const key = v.cin.trim();
+    if (!cinMap.has(key)) cinMap.set(key, []);
+    cinMap.get(key)!.push(v);
+  });
+
+  const duplicates: { cin: string; voters: Voter[] }[] = [];
+  cinMap.forEach((entries, cin) => {
+    if (entries.length > 1) duplicates.push({ cin, voters: entries });
+  });
+  duplicates.sort((a, b) => a.cin.localeCompare(b.cin));
+
+  doc.setFontSize(16);
+  doc.text(reshapeArabic('قائمة المكررين'), doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
+  doc.setFontSize(10);
+  doc.text(`Total doublons: ${duplicates.length}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+
+  const body: any[][] = [];
+  duplicates.forEach(({ voters: dupVoters }) => {
+    dupVoters.forEach((v, i) => {
+      body.push([
+        v.cin,
+        reshapeArabic(v.lastName),
+        reshapeArabic(v.firstName),
+        reshapeArabic(v.gender),
+        reshapeArabic(v.commune),
+        reshapeArabic(v.circonscription),
+        reshapeArabic(v.bvName),
+        i === 0 ? String(dupVoters.length) : '',
+      ]);
+    });
+  });
+
+  autoTable(doc, {
+    startY: 28,
+    head: [['CIN', reshapeArabic('الاسم العائلي'), reshapeArabic('الاسم الشخصي'), reshapeArabic('الجنس'), reshapeArabic('الجماعة'), reshapeArabic('الدائرة'), reshapeArabic('مكتب التصويت'), reshapeArabic('التكرار')]],
+    body,
+    styles: { fontSize: 8, cellPadding: 2, font: 'Amiri', halign: 'right' },
+    headStyles: { fillColor: [204, 41, 41], font: 'Amiri', fontStyle: 'normal', halign: 'right' },
+    alternateRowStyles: { fillColor: [255, 245, 245] },
+  });
+
+  doc.save('doublons.pdf');
+}
