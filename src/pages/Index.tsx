@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileText, BarChart3, PieChart } from 'lucide-react';
+import { FileText, BarChart3, PieChart, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ImportButton from '@/components/ImportButton';
@@ -10,6 +10,7 @@ import MatrixView from '@/components/MatrixView';
 import StatsCards from '@/components/StatsCards';
 import { generateVoterPDF, generateMatrixPDF } from '@/lib/pdfGenerator';
 import ChartsView from '@/components/ChartsView';
+import DuplicatesView from '@/components/DuplicatesView';
 import type { Voter, MatrixRow } from '@/types/voter';
 
 const Index = () => {
@@ -100,6 +101,9 @@ const Index = () => {
                   <TabsTrigger value="charts" className="gap-1.5">
                     <PieChart className="h-4 w-4" /> Graphiques
                   </TabsTrigger>
+                  <TabsTrigger value="duplicates" className="gap-1.5">
+                    <Copy className="h-4 w-4" /> Doublons
+                  </TabsTrigger>
                 </TabsList>
                 <div className="flex gap-2">
                   <Button
@@ -129,6 +133,9 @@ const Index = () => {
               </TabsContent>
               <TabsContent value="charts" className="mt-4">
                 <ChartsView voters={filtered} />
+              </TabsContent>
+              <TabsContent value="duplicates" className="mt-4">
+                <DuplicatesView voters={filtered} />
               </TabsContent>
             </Tabs>
           </>
