@@ -1,14 +1,28 @@
 import { useMemo } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { FileText } from 'lucide-react';
+import { generateDuplicatesPDF } from '@/lib/pdfGenerator';
 import type { Voter } from '@/types/voter';
 
 interface DuplicatesViewProps {
   voters: Voter[];
 }
 
+const COMMUNE_COLORS = [
+  'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
+  'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300',
+  'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+  'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
+  'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300',
+  'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300',
+  'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
+  'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300',
+];
+
 const DuplicatesView = ({ voters }: DuplicatesViewProps) => {
-  const duplicatesByCommune = useMemo(() => {
+  const { flatRows, totalDuplicates, communeColorMap } = useMemo(() => {
     // Group voters by CIN
     const cinMap = new Map<string, Voter[]>();
     voters.forEach((v) => {
@@ -18,37 +32,28 @@ const DuplicatesView = ({ voters }: DuplicatesViewProps) => {
       cinMap.get(key)!.push(v);
     });
 
-    // Keep only duplicates (CIN appearing more than once)
-    const duplicates = new Map<string, Voter[]>();
+    // Keep only duplicates
+    const duplicates: { cin: string; voters: Voter[] }[] = [];
     cinMap.forEach((entries, cin) => {
-      if (entries.length > 1) duplicates.set(cin, entries);
+      if (entries.length > 1) duplicates.push({ cin, voters: entries });
     });
 
-    // Group duplicates by commune
-    const communeMap = new Map<string, { cin: string; voters: Voter[] }[]>();
-    duplicates.forEach((entries, cin) => {
-      const communes = [...new Set(entries.map((v) => v.commune))];
-      communes.forEach((commune) => {
-        if (!communeMap.has(commune)) communeMap.set(commune, []);
-        const communeVoters = entries.filter((v) => v.commune === commune);
-        // Only add if not already added for this commune
-        const existing = communeMap.get(commune)!;
-        if (!existing.find((e) => e.cin === cin)) {
-          existing.push({ cin, voters: entries });
-        }
+    // Build color map for communes
+    const allCommunes = [...new Set(duplicates.flatMap(d => d.voters.map(v => v.commune)))].sort();
+    const colorMap = new Map<string, string>();
+    allCommunes.forEach((c, i) => colorMap.set(c, COMMUNE_COLORS[i % COMMUNE_COLORS.length]));
+
+    // Flatten into rows with commune column
+    const rows: { voter: Voter; cin: string; occurrences: number; isFirst: boolean; groupSize: number }[] = [];
+    duplicates.sort((a, b) => a.cin.localeCompare(b.cin));
+    duplicates.forEach(({ cin, voters: dupVoters }) => {
+      dupVoters.forEach((v, i) => {
+        rows.push({ voter: v, cin, occurrences: dupVoters.length, isFirst: i === 0, groupSize: dupVoters.length });
       });
     });
 
-    return communeMap;
+    return { flatRows: rows, totalDuplicates: duplicates.length, communeColorMap: colorMap };
   }, [voters]);
-
-  const totalDuplicates = useMemo(() => {
-    const seen = new Set<string>();
-    duplicatesByCommune.forEach((entries) => {
-      entries.forEach((e) => seen.add(e.cin));
-    });
-    return seen.size;
-  }, [duplicatesByCommune]);
 
   if (totalDuplicates === 0) {
     return (
@@ -59,69 +64,73 @@ const DuplicatesView = ({ voters }: DuplicatesViewProps) => {
     );
   }
 
-  const sortedCommunes = [...duplicatesByCommune.entries()].sort((a, b) =>
-    a[0].localeCompare(b[0])
-  );
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
         <Badge variant="destructive" className="text-sm px-3 py-1">
           {totalDuplicates} CIN en doublon
         </Badge>
       </div>
 
-      {sortedCommunes.map(([commune, entries]) => (
-        <div key={commune} className="rounded-xl border bg-card overflow-hidden">
-          <div className="px-4 py-3 bg-muted/50 border-b flex items-center justify-between">
-            <h3 className="font-semibold text-foreground">{commune}</h3>
-            <Badge variant="secondary">{entries.length} doublon(s)</Badge>
-          </div>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="data-table-header">
-                  <TableHead>CIN</TableHead>
-                  <TableHead>Nom</TableHead>
-                  <TableHead>Prénom</TableHead>
-                  <TableHead>Genre</TableHead>
-                  <TableHead>Circ.</TableHead>
-                  <TableHead>BV</TableHead>
-                  <TableHead>Occurrences</TableHead>
+      <div className="rounded-xl border bg-card overflow-hidden">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="data-table-header">
+                <TableHead>CIN</TableHead>
+                <TableHead>Nom</TableHead>
+                <TableHead>Prénom</TableHead>
+                <TableHead>Genre</TableHead>
+                <TableHead>Commune</TableHead>
+                <TableHead>Circ.</TableHead>
+                <TableHead>BV</TableHead>
+                <TableHead>Occurrences</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {flatRows.map((row, idx) => (
+                <TableRow
+                  key={`${row.cin}-${idx}`}
+                  className={row.isFirst ? 'border-t-2 border-t-destructive/30' : 'bg-muted/20'}
+                >
+                  <TableCell className="font-mono font-medium">{row.voter.cin}</TableCell>
+                  <TableCell>{row.voter.lastName}</TableCell>
+                  <TableCell>{row.voter.firstName}</TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
+                      row.voter.gender === 'm' ? 'bg-info/10 text-info' : 'bg-accent/10 text-accent'
+                    }`}>
+                      {row.voter.gender === 'm' ? 'M' : 'F'}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ${communeColorMap.get(row.voter.commune) || ''}`}>
+                      {row.voter.commune}
+                    </span>
+                  </TableCell>
+                  <TableCell className="font-mono">{row.voter.circonscription}</TableCell>
+                  <TableCell className="font-mono">{row.voter.bvName}</TableCell>
+                  {row.isFirst && (
+                    <TableCell rowSpan={row.groupSize} className="text-center">
+                      <Badge variant="destructive">{row.occurrences}</Badge>
+                    </TableCell>
+                  )}
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {entries.map(({ cin, voters: dupVoters }) =>
-                  dupVoters.map((v, i) => (
-                    <TableRow
-                      key={`${cin}-${i}`}
-                      className={i === 0 ? 'border-t-2 border-t-destructive/30' : 'bg-muted/20'}
-                    >
-                      <TableCell className="font-mono font-medium">{v.cin}</TableCell>
-                      <TableCell>{v.lastName}</TableCell>
-                      <TableCell>{v.firstName}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                          v.gender === 'm' ? 'bg-info/10 text-info' : 'bg-accent/10 text-accent'
-                        }`}>
-                          {v.gender === 'm' ? 'M' : 'F'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-mono">{v.circonscription}</TableCell>
-                      <TableCell className="font-mono">{v.bvName}</TableCell>
-                      {i === 0 && (
-                        <TableCell rowSpan={dupVoters.length} className="text-center">
-                          <Badge variant="destructive">{dupVoters.length}</Badge>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+              ))}
+            </TableBody>
+          </Table>
         </div>
-      ))}
+      </div>
+
+      <div className="flex justify-end">
+        <Button
+          variant="outline"
+          className="gap-1.5"
+          onClick={() => generateDuplicatesPDF(voters)}
+        >
+          <FileText className="h-4 w-4" /> Exporter PDF Doublons
+        </Button>
+      </div>
     </div>
   );
 };
