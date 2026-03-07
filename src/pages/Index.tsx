@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileText, BarChart3, PieChart, Copy } from 'lucide-react';
+import { FileText, BarChart3, PieChart, Copy, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ImportButton from '@/components/ImportButton';
@@ -8,7 +8,9 @@ import Filters from '@/components/Filters';
 import VoterTable from '@/components/VoterTable';
 import MatrixView from '@/components/MatrixView';
 import StatsCards from '@/components/StatsCards';
+import ThemeToggle from '@/components/ThemeToggle';
 import { generateVoterPDF, generateMatrixPDF } from '@/lib/pdfGenerator';
+import { exportVotersToExcel } from '@/lib/excelExporter';
 import ChartsView from '@/components/ChartsView';
 import DuplicatesView from '@/components/DuplicatesView';
 import type { Voter, MatrixRow } from '@/types/voter';
@@ -24,7 +26,16 @@ const Index = () => {
 
   const filtered = useMemo(() => {
     return voters.filter((v) => {
-      if (search && !v.cin.toLowerCase().includes(search.toLowerCase())) return false;
+      if (search) {
+        const q = search.toLowerCase();
+        const match =
+          v.cin.toLowerCase().includes(q) ||
+          v.firstName.toLowerCase().includes(q) ||
+          v.lastName.toLowerCase().includes(q) ||
+          v.address.toLowerCase().includes(q) ||
+          v.bvAddress.toLowerCase().includes(q);
+        if (!match) return false;
+      }
       if (commune !== '__all__' && v.commune !== commune) return false;
       if (circons !== '__all__' && v.circonscription !== circons) return false;
       return true;
@@ -59,7 +70,10 @@ const Index = () => {
             <h1 className="text-xl font-bold text-foreground">Gestion Électorale</h1>
             <p className="text-sm text-muted-foreground">Système de gestion des listes électorales</p>
           </div>
-          <ImportButton onImport={setVoters} />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <ImportButton onImport={setVoters} />
+          </div>
         </div>
       </header>
 
@@ -90,7 +104,7 @@ const Index = () => {
             </div>
 
             <Tabs defaultValue="list">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <TabsList>
                   <TabsTrigger value="list" className="gap-1.5">
                     <FileText className="h-4 w-4" /> Liste
@@ -105,7 +119,15 @@ const Index = () => {
                     <Copy className="h-4 w-4" /> Doublons
                   </TabsTrigger>
                 </TabsList>
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-wrap">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => exportVotersToExcel(filtered)}
+                  >
+                    <Download className="h-3.5 w-3.5" /> Excel
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"

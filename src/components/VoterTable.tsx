@@ -1,8 +1,8 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import type { Voter } from '@/types/voter';
 
 interface VoterTableProps {
@@ -13,9 +13,27 @@ const ROW_HEIGHT = 44;
 const HEADER_HEIGHT = 48;
 const PAGE_SIZE_OPTIONS = [50, 100, 500, 1000, 5000];
 
+type SortKey = keyof Voter | null;
+type SortDir = 'asc' | 'desc';
+
+const COLUMNS: { key: keyof Voter | null; label: string; width: string; mono?: boolean }[] = [
+  { key: null, label: '#', width: 'w-12' },
+  { key: 'cin', label: 'CIN', width: 'w-28', mono: true },
+  { key: 'lastName', label: 'Nom', width: 'w-32' },
+  { key: 'firstName', label: 'Prénom', width: 'w-32' },
+  { key: 'gender', label: 'Genre', width: 'w-16' },
+  { key: 'commune', label: 'Commune', width: 'w-32' },
+  { key: 'circonscription', label: 'Circ.', width: 'w-20', mono: true },
+  { key: 'bvName', label: 'BV', width: 'w-28', mono: true },
+  { key: 'bvAddress', label: 'Adresse BV', width: 'flex-1 min-w-[200px]' },
+  { key: 'province', label: 'Province', width: 'w-28' },
+];
+
 const VoterTable = ({ voters }: VoterTableProps) => {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(1000);
+  const [sortKey, setSortKey] = useState<SortKey>(null);
+  const [sortDir, setSortDir] = useState<SortDir>('asc');
   const parentRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [listHeight, setListHeight] = useState(600);
@@ -33,9 +51,20 @@ const VoterTable = ({ voters }: VoterTableProps) => {
     return () => window.removeEventListener('resize', updateHeight);
   }, []);
 
-  const totalPages = Math.ceil(voters.length / pageSize);
+  const sorted = useMemo(() => {
+    if (!sortKey) return voters;
+    const k = sortKey;
+    return [...voters].sort((a, b) => {
+      const av = String(a[k] ?? '');
+      const bv = String(b[k] ?? '');
+      const cmp = av.localeCompare(bv, 'fr', { numeric: true });
+      return sortDir === 'asc' ? cmp : -cmp;
+    });
+  }, [voters, sortKey, sortDir]);
+
+  const totalPages = Math.ceil(sorted.length / pageSize);
   const start = page * pageSize;
-  const paged = voters.slice(start, start + pageSize);
+  const paged = sorted.slice(start, start + pageSize);
 
   const virtualizer = useVirtualizer({
     count: paged.length,
@@ -43,6 +72,17 @@ const VoterTable = ({ voters }: VoterTableProps) => {
     estimateSize: () => ROW_HEIGHT,
     overscan: 20,
   });
+
+  const handleSort = (key: keyof Voter | null) => {
+    if (!key) return;
+    if (sortKey === key) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    } else {
+      setSortKey(key);
+      setSortDir('asc');
+    }
+    setPage(0);
+  };
 
   if (voters.length === 0) {
     return (
@@ -55,21 +95,27 @@ const VoterTable = ({ voters }: VoterTableProps) => {
 
   const safePage = (p: number) => setPage(Math.max(0, Math.min(p, totalPages - 1)));
 
+  const SortIcon = ({ col }: { col: keyof Voter | null }) => {
+    if (!col) return null;
+    if (sortKey !== col) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    return sortDir === 'asc' ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+  };
+
   return (
     <div className="space-y-3" ref={containerRef}>
       <div className="rounded-xl border bg-card overflow-hidden">
         {/* Header */}
         <div className="flex items-center data-table-header border-b border-border" style={{ height: HEADER_HEIGHT }}>
-          <div className="w-12 px-3 font-medium text-muted-foreground text-sm shrink-0">#</div>
-          <div className="w-28 px-3 font-medium text-muted-foreground text-sm shrink-0">CIN</div>
-          <div className="w-32 px-3 font-medium text-muted-foreground text-sm shrink-0">Nom</div>
-          <div className="w-32 px-3 font-medium text-muted-foreground text-sm shrink-0">Prénom</div>
-          <div className="w-16 px-3 font-medium text-muted-foreground text-sm shrink-0">Genre</div>
-          <div className="w-32 px-3 font-medium text-muted-foreground text-sm shrink-0">Commune</div>
-          <div className="w-20 px-3 font-medium text-muted-foreground text-sm shrink-0">Circ.</div>
-          <div className="w-28 px-3 font-medium text-muted-foreground text-sm shrink-0">BV</div>
-          <div className="flex-1 min-w-[200px] px-3 font-medium text-muted-foreground text-sm">Adresse BV</div>
-          <div className="w-28 px-3 font-medium text-muted-foreground text-sm shrink-0">Province</div>
+          {COLUMNS.map((col, i) => (
+            <div
+              key={i}
+              className={`${col.width} px-3 font-medium text-muted-foreground text-sm shrink-0 ${col.key ? 'cursor-pointer select-none hover:text-foreground transition-colors' : ''} flex items-center gap-1`}
+              onClick={() => handleSort(col.key)}
+            >
+              {col.label}
+              <SortIcon col={col.key} />
+            </div>
+          ))}
         </div>
         {/* Virtualized body */}
         <div
@@ -103,7 +149,7 @@ const VoterTable = ({ voters }: VoterTableProps) => {
                   <div className="w-32 px-3 shrink-0 truncate">{v.firstName}</div>
                   <div className="w-16 px-3 shrink-0 text-center">
                     <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                      v.gender === 'm' ? 'bg-info/10 text-info' : 'bg-accent/10 text-accent'
+                      v.gender === 'm' ? 'bg-info/10 text-info' : 'bg-accent text-accent-foreground'
                     }`}>
                       {v.gender === 'm' ? 'M' : 'F'}
                     </span>
@@ -123,7 +169,7 @@ const VoterTable = ({ voters }: VoterTableProps) => {
       {/* Pagination */}
       <div className="flex items-center justify-between px-1">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>{start + 1}–{Math.min(start + pageSize, voters.length)} sur {voters.length}</span>
+          <span>{start + 1}–{Math.min(start + pageSize, sorted.length)} sur {sorted.length}</span>
           <Select value={String(pageSize)} onValueChange={(v) => { setPageSize(Number(v)); setPage(0); }}>
             <SelectTrigger className="h-8 w-[85px]">
               <SelectValue />
