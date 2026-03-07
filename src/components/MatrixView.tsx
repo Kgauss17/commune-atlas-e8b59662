@@ -31,7 +31,7 @@ const MatrixView = ({ voters }: MatrixViewProps) => {
 
     const communes = [...communeSet].sort();
     // Sort circonscriptions and build ordered BV list
-    const circonsKeys = [...circBvMap.keys()].sort();
+    const circonsKeys = [...circBvMap.keys()].sort((a, b) => Number(a) - Number(b));
     const circonsMap = new Map<string, string[]>();
     const bvList: BvInfo[] = [];
 
