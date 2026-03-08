@@ -3,6 +3,7 @@ import { Upload, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { parseExcelFile } from '@/lib/excelParser';
+import { saveVoters, addImportRecord } from '@/lib/storage';
 import type { Voter } from '@/types/voter';
 import { toast } from 'sonner';
 
@@ -22,6 +23,8 @@ const ImportButton = ({ onImport }: ImportButtonProps) => {
     setProgress(0);
     try {
       const voters = await parseExcelFile(file, (pct) => setProgress(pct));
+      saveVoters(voters);
+      addImportRecord(file.name, voters.length);
       onImport(voters);
       toast.success(`${voters.length.toLocaleString()} électeurs importés avec succès`);
     } catch {
