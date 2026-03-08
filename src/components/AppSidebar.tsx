@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, BarChart3, PieChart, Map, Copy, GitCompare, 
-  Download, ChevronDown, Users, Settings, LogOut
+  ChevronDown, LogOut, History, Moon, Sun, Settings
 } from 'lucide-react';
 import {
   Sidebar,
@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
-import ThemeToggle from '@/components/ThemeToggle';
+import { useTheme } from 'next-themes';
 
 interface AppSidebarProps {
   activeView: string;
@@ -39,16 +39,22 @@ const analysisNav = [
   { id: 'map', label: 'Carte', icon: Map },
   { id: 'duplicates', label: 'Doublons', icon: Copy },
   { id: 'compare', label: 'Comparer', icon: GitCompare },
+  { id: 'history', label: 'Historique imports', icon: History },
 ];
 
 const AppSidebar = ({ activeView, onViewChange, voterCount, hasData }: AppSidebarProps) => {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const navigate = useNavigate();
+  const { theme, setTheme } = useTheme();
 
   const handleLogout = () => {
     sessionStorage.removeItem('auth');
     navigate('/login');
+  };
+
+  const toggleTheme = () => {
+    setTheme(theme === 'dark' ? 'light' : 'dark');
   };
 
   return (
@@ -121,7 +127,7 @@ const AppSidebar = ({ activeView, onViewChange, voterCount, hasData }: AppSideba
                         isActive={activeView === item.id}
                         onClick={() => onViewChange(item.id)}
                         tooltip={item.label}
-                        disabled={!hasData}
+                        disabled={!hasData && item.id !== 'history'}
                       >
                         <item.icon className="h-4 w-4" />
                         {!collapsed && <span>{item.label}</span>}
@@ -133,20 +139,41 @@ const AppSidebar = ({ activeView, onViewChange, voterCount, hasData }: AppSideba
             </CollapsibleContent>
           </SidebarGroup>
         </Collapsible>
-      </SidebarContent>
 
-      <SidebarFooter className="p-3 space-y-2">
-        <ThemeToggle />
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-          onClick={handleLogout}
-        >
-          <LogOut className="h-4 w-4" />
-          {!collapsed && <span>Déconnexion</span>}
-        </Button>
-      </SidebarFooter>
+        {/* Paramètres */}
+        <Collapsible defaultOpen className="group/collapsible">
+          <SidebarGroup>
+            <CollapsibleTrigger asChild>
+              <SidebarGroupLabel className="cursor-pointer hover:text-sidebar-foreground">
+                {!collapsed && 'Paramètres'}
+                {!collapsed && <ChevronDown className="ml-auto h-4 w-4 transition-transform group-data-[state=open]/collapsible:rotate-0 group-data-[state=closed]/collapsible:-rotate-90" />}
+              </SidebarGroupLabel>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton onClick={toggleTheme} tooltip={theme === 'dark' ? 'Mode jour' : 'Mode nuit'}>
+                      {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                      {!collapsed && <span>{theme === 'dark' ? 'Mode jour' : 'Mode nuit'}</span>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      onClick={handleLogout}
+                      tooltip="Déconnexion"
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      {!collapsed && <span>Déconnexion</span>}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+      </SidebarContent>
     </Sidebar>
   );
 };
