@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/AppSidebar';
 import ImportButton from '@/components/ImportButton';
+import ImportHistory from '@/components/ImportHistory';
 import SearchBar from '@/components/SearchBar';
 import Filters from '@/components/Filters';
 import VoterTable from '@/components/VoterTable';
@@ -11,6 +12,7 @@ import MatrixView from '@/components/MatrixView';
 import Dashboard from '@/components/Dashboard';
 import { generateVoterPDF, generateMatrixPDF } from '@/lib/pdfGenerator';
 import { exportVotersToExcel } from '@/lib/excelExporter';
+import { loadVoters, saveVoters } from '@/lib/storage';
 import ChartsView from '@/components/ChartsView';
 import DuplicatesView from '@/components/DuplicatesView';
 import CompareView from '@/components/CompareView';
@@ -18,7 +20,7 @@ import MapView from '@/components/MapView';
 import type { Voter } from '@/types/voter';
 
 const Index = () => {
-  const [voters, setVoters] = useState<Voter[]>([]);
+  const [voters, setVoters] = useState<Voter[]>(() => loadVoters());
   const [search, setSearch] = useState('');
   const [commune, setCommune] = useState('__all__');
   const [circons, setCircons] = useState('__all__');
@@ -113,12 +115,15 @@ const Index = () => {
 
           <main className="flex-1 p-4 space-y-4 overflow-auto">
             {voters.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-32 text-muted-foreground">
-                <div className="p-4 rounded-full bg-muted mb-4">
-                  <FileText className="h-10 w-10" />
+              <div className="space-y-6">
+                <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+                  <div className="p-4 rounded-full bg-muted mb-4">
+                    <FileText className="h-10 w-10" />
+                  </div>
+                  <p className="text-lg font-medium">Aucune donnée importée</p>
+                  <p className="text-sm">Cliquez sur "Importer" pour charger un fichier Excel</p>
                 </div>
-                <p className="text-lg font-medium">Aucune donnée importée</p>
-                <p className="text-sm">Cliquez sur "Importer" pour charger un fichier Excel</p>
+                <ImportHistory />
               </div>
             ) : (
               <>
