@@ -1,6 +1,7 @@
+import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, BarChart3, PieChart, Map, Copy, GitCompare, 
-  Download, ChevronDown, Users, Settings
+  Download, ChevronDown, Users, Settings, LogOut
 } from 'lucide-react';
 import {
   Sidebar,
@@ -17,6 +18,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 import ThemeToggle from '@/components/ThemeToggle';
 
 interface AppSidebarProps {
@@ -42,6 +44,12 @@ const analysisNav = [
 const AppSidebar = ({ activeView, onViewChange, voterCount, hasData }: AppSidebarProps) => {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('auth');
+    navigate('/login');
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -127,11 +135,17 @@ const AppSidebar = ({ activeView, onViewChange, voterCount, hasData }: AppSideba
         </Collapsible>
       </SidebarContent>
 
-      <SidebarFooter className="p-3">
-        <div className="flex items-center justify-between">
-          {!collapsed && <ThemeToggle />}
-          {collapsed && <ThemeToggle />}
-        </div>
+      <SidebarFooter className="p-3 space-y-2">
+        <ThemeToggle />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span>Déconnexion</span>}
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
