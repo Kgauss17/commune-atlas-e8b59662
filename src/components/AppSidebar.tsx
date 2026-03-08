@@ -1,6 +1,7 @@
+import { useNavigate } from 'react-router-dom';
 import { 
   LayoutDashboard, FileText, BarChart3, PieChart, Map, Copy, GitCompare, 
-  Download, ChevronDown, Users, Settings
+  Download, ChevronDown, Users, Settings, LogOut
 } from 'lucide-react';
 import {
   Sidebar,
