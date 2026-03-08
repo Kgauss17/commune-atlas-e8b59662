@@ -171,6 +171,17 @@ const MatrixView = ({ voters }: MatrixViewProps) => {
         </div>
         <ScrollBar orientation="horizontal" />
       </ScrollArea>
+
+      <div className="flex justify-end p-3 border-t">
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-1.5"
+          onClick={() => exportMatrixToExcel(communes, circonsMap, bvList, cellMap, communeTotals, bvTotals, grandTotal)}
+        >
+          <Download className="h-3.5 w-3.5" /> Exporter Matrice XLS
+        </Button>
+      </div>
     </div>
   );
 };
