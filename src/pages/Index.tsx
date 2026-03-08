@@ -69,6 +69,8 @@ const Index = () => {
         return <DuplicatesView voters={filtered} />;
       case 'compare':
         return <CompareView currentVoters={voters} />;
+      case 'history':
+        return <ImportHistory />;
       default:
         return <Dashboard voters={filtered} allVoters={voters} />;
     }
