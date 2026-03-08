@@ -16,17 +16,20 @@ const PAGE_SIZE_OPTIONS = [50, 100, 500, 1000, 5000];
 type SortKey = keyof Voter | null;
 type SortDir = 'asc' | 'desc';
 
-const COLUMNS: { key: keyof Voter | null; label: string; width: string; mono?: boolean }[] = [
-  { key: null, label: '#', width: 'w-12' },
-  { key: 'cin', label: 'CIN', width: 'w-28', mono: true },
-  { key: 'lastName', label: 'الاسم العائلي', width: 'w-32' },
-  { key: 'firstName', label: 'الاسم الشخصي', width: 'w-32' },
+const COLUMNS: { key: keyof Voter; label: string; width: string; mono?: boolean }[] = [
+  { key: 'orderNumber', label: 'الرقم الترتيبي', width: 'w-16', mono: true },
+  { key: 'cin', label: 'رقم بطاقة التعريف', width: 'w-28', mono: true },
+  { key: 'address', label: 'العنوان بدقة', width: 'w-36' },
+  { key: 'birthDate', label: 'تاريخ الازدياد', width: 'w-28' },
+  { key: 'firstName', label: 'الاسم الشخصي للناخب', width: 'w-32' },
+  { key: 'lastName', label: 'الاسم العائلي للناخب', width: 'w-32' },
   { key: 'gender', label: 'الجنس', width: 'w-20' },
+  { key: 'circonscription', label: 'الدائرة الانتخابية', width: 'w-24', mono: true },
   { key: 'commune', label: 'الجماعة', width: 'w-36' },
-  { key: 'circonscription', label: 'الدائرة', width: 'w-24', mono: true },
-  { key: 'bvName', label: 'مكتب التصويت', width: 'w-28', mono: true },
-  { key: 'bvAddress', label: 'عنوان م.ت', width: 'flex-1 min-w-[180px]' },
-  { key: 'province', label: 'العمالة/الإقليم', width: 'w-32' },
+  { key: 'bvName', label: 'اسم مكتب التصويت', width: 'w-28', mono: true },
+  { key: 'bvAddress', label: 'عنوان مكتب التصويت', width: 'w-36' },
+  { key: 'bvLocation', label: 'مكان مكتب التصويت', width: 'w-32' },
+  { key: 'province', label: 'العمالة او الاقليم', width: 'w-32' },
 ];
 
 // Color hash for commune badges
