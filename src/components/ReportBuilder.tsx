@@ -56,11 +56,19 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
   const circonscriptions = useMemo(() => [...new Set(voters.map(v => v.circonscription))].sort(), [voters]);
 
   const filtered = useMemo(() => {
-    return voters.filter(v => {
-      if (commune !== '__all__' && v.commune !== commune) return false;
-      if (circons !== '__all__' && v.circonscription !== circons) return false;
-      return true;
-    });
+    return voters
+      .filter(v => {
+        if (commune !== '__all__' && v.commune !== commune) return false;
+        if (circons !== '__all__' && v.circonscription !== circons) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const c = (a.commune ?? '').localeCompare(b.commune ?? '', 'ar');
+        if (c !== 0) return c;
+        const d = (a.circonscription ?? '').localeCompare(b.circonscription ?? '', 'ar');
+        if (d !== 0) return d;
+        return (a.orderNumber ?? 0) - (b.orderNumber ?? 0);
+      });
   }, [voters, commune, circons]);
 
   const totalPages = Math.ceil(filtered.length / pageSize);
