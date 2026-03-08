@@ -62,9 +62,7 @@ const AppSidebar = ({ activeView, onViewChange, voterCount, hasData }: AppSideba
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="p-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground font-bold text-sm shrink-0">
-            GE
-          </div>
+          <img src={armoiriesLogo} alt="المملكة المغربية" className="h-10 w-auto shrink-0" />
           {!collapsed && (
             <div className="flex flex-col">
               <span className="text-sm font-bold text-sidebar-foreground">Gestion Électorale</span>
