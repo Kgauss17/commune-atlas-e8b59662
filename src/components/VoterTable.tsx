@@ -33,30 +33,8 @@ const COLUMNS: { key: keyof Voter; label: string; width: string; mono?: boolean 
   { key: 'province', label: 'العمالة او الاقليم', width: 'w-32' },
 ];
 
-// Color hash for commune badges
-const COMMUNE_COLORS = [
-  'bg-primary/15 text-primary',
-  'bg-info/15 text-info',
-  'bg-success/15 text-success',
-  'bg-warning/15 text-warning',
-  'bg-accent text-accent-foreground',
-  'bg-destructive/15 text-destructive',
-];
-
-const CIRCONS_COLORS = [
-  'bg-info/20 text-info',
-  'bg-primary/20 text-primary',
-  'bg-success/20 text-success',
-  'bg-warning/20 text-warning',
-];
-
-function hashColor(str: string, colors: string[]): string {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
-}
+// Min total width for all columns to enable proper horizontal scroll
+const MIN_ROW_WIDTH = 1400;
 
 const VoterTable = ({ voters }: VoterTableProps) => {
   const [page, setPage] = useState(0);
