@@ -18,6 +18,7 @@ import DuplicatesView from '@/components/DuplicatesView';
 import CompareView from '@/components/CompareView';
 import MapView from '@/components/MapView';
 import type { Voter } from '@/types/voter';
+import { toast } from 'sonner';
 
 const Index = () => {
   const [voters, setVoters] = useState<Voter[]>(() => loadVoters());
