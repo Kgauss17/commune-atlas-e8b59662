@@ -43,6 +43,12 @@ const analysisNav = [
 const AppSidebar = ({ activeView, onViewChange, voterCount, hasData }: AppSidebarProps) => {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('auth');
+    navigate('/login');
+  };
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
