@@ -98,6 +98,14 @@ const Index = () => {
                 <ImportButton onImport={setVoters} />
                 {voters.length > 0 && (
                   <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => { clearVoters(); clearImportHistory(); setVoters([]); toast.success('Données supprimées'); }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Vider
+                    </Button>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportVotersToExcel(filtered)}>
                       <Download className="h-3.5 w-3.5" /> Excel
                     </Button>
