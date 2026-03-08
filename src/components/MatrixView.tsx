@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
+import { Download } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { exportMatrixToExcel } from '@/lib/excelExporter';
 import type { Voter } from '@/types/voter';
 
 interface MatrixViewProps {
