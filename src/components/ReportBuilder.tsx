@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileText, Printer, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,8 +10,11 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
 import { CalendarIcon } from 'lucide-react';
+import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { loadArabicFont, setupArabicFont, reshapeArabic } from '@/lib/pdfGenerator';
 import type { Voter } from '@/types/voter';
 
 interface ReportBuilderProps {
@@ -47,6 +50,7 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
   const [showPreview, setShowPreview] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
+  const [generating, setGenerating] = useState(false);
 
   const communes = useMemo(() => [...new Set(voters.map(v => v.commune))].sort(), [voters]);
   const circonscriptions = useMemo(() => [...new Set(voters.map(v => v.circonscription))].sort(), [voters]);
@@ -70,10 +74,6 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
 
   const getFieldLabel = (key: keyof Voter) => FIELD_OPTIONS.find(f => f.key === key)?.labelAr || key;
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const goToPage = (page: number) => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
@@ -93,6 +93,145 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
       pages.push(totalPages);
     }
     return pages;
+  };
+
+  const generatePDF = async () => {
+    if (selectedFields.length === 0) return;
+    setGenerating(true);
+    try {
+      const fontBase64 = await loadArabicFont();
+      const doc = new jsPDF({ orientation: 'landscape' });
+      setupArabicFont(doc, fontBase64);
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 10;
+
+      // Dynamic column widths based on selected fields count
+      const colCount = selectedFields.length + 1; // +1 for row number
+      const usableWidth = pageWidth - margin * 2;
+
+      // --- AdminLTE v3 styled header ---
+      // Top accent bar
+      doc.setFillColor(41, 121, 204);
+      doc.rect(0, 0, pageWidth, 4, 'F');
+
+      // Header background
+      doc.setFillColor(245, 247, 250);
+      doc.rect(0, 4, pageWidth, 32, 'F');
+
+      // Title (Arabic)
+      doc.setTextColor(30, 30, 30);
+      doc.setFontSize(16);
+      doc.text(reshapeArabic(titleAr), pageWidth / 2, 18, { align: 'center' });
+
+      // Subtitle info
+      doc.setFontSize(9);
+      doc.setTextColor(100, 100, 100);
+      const infoParts: string[] = [];
+      if (electionDate) {
+        infoParts.push(reshapeArabic('يوم الاقتراع') + ': ' + format(electionDate, 'yyyy/MM/dd'));
+      }
+      if (commune !== '__all__') {
+        infoParts.push(reshapeArabic('الجماعة') + ': ' + reshapeArabic(commune));
+      }
+      if (circons !== '__all__') {
+        infoParts.push(reshapeArabic('الدائرة') + ': ' + reshapeArabic(circons));
+      }
+      infoParts.push(reshapeArabic('المجموع') + ': ' + filtered.length.toLocaleString());
+      doc.text(infoParts.join('  |  '), pageWidth / 2, 28, { align: 'center' });
+
+      // Separator
+      doc.setDrawColor(200, 200, 200);
+      doc.setLineWidth(0.3);
+      doc.line(margin, 38, pageWidth - margin, 38);
+
+      const startY = 42;
+
+      // Build header row
+      const headerRow = [
+        '#',
+        ...selectedFields.map(key => reshapeArabic(getFieldLabel(key)))
+      ];
+
+      // Build body rows
+      const bodyRows = filtered.map((voter, idx) => [
+        idx + 1,
+        ...selectedFields.map(key => {
+          const val = voter[key];
+          const str = String(val ?? '');
+          return /[\u0600-\u06FF]/.test(str) ? reshapeArabic(str) : str;
+        }),
+      ]);
+
+      // Dynamic column styles - auto-size based on field count
+      const columnStyles: Record<number, any> = {
+        0: { halign: 'center', cellWidth: Math.min(12, usableWidth / colCount) },
+      };
+      // For remaining columns, let autoTable handle width dynamically
+      for (let i = 1; i <= selectedFields.length; i++) {
+        columnStyles[i] = { halign: 'right' };
+      }
+
+      autoTable(doc, {
+        startY,
+        head: [headerRow],
+        body: bodyRows,
+        margin: { left: margin, right: margin, top: 42, bottom: 18 },
+        styles: {
+          fontSize: colCount > 8 ? 7 : 8,
+          cellPadding: colCount > 10 ? 1.5 : 2,
+          font: 'Amiri',
+          halign: 'right',
+          overflow: 'linebreak',
+        },
+        headStyles: {
+          fillColor: [52, 58, 64], // AdminLTE v3 dark header
+          textColor: [255, 255, 255],
+          font: 'Amiri',
+          fontStyle: 'normal',
+          halign: 'right',
+          fontSize: colCount > 8 ? 7 : 8,
+        },
+        alternateRowStyles: { fillColor: [245, 247, 250] },
+        columnStyles,
+        tableWidth: 'auto',
+        didDrawPage: (data: any) => {
+          // Re-draw header on subsequent pages
+          if (data.pageNumber > 1) {
+            doc.setFillColor(41, 121, 204);
+            doc.rect(0, 0, pageWidth, 4, 'F');
+            doc.setFillColor(245, 247, 250);
+            doc.rect(0, 4, pageWidth, 8, 'F');
+            doc.setFontSize(9);
+            doc.setTextColor(80, 80, 80);
+            doc.text(reshapeArabic(titleAr), pageWidth / 2, 10, { align: 'center' });
+          }
+        },
+      });
+
+      // Footer on every page
+      const totalPdfPages = (doc as any).internal.getNumberOfPages();
+      for (let i = 1; i <= totalPdfPages; i++) {
+        doc.setPage(i);
+        // Bottom accent bar
+        doc.setFillColor(41, 121, 204);
+        doc.rect(0, pageHeight - 3, pageWidth, 3, 'F');
+        // Footer text
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        doc.text(reshapeArabic('حالة انتخابية') + ' - ' + new Date().toLocaleDateString('fr-FR'), margin, pageHeight - 7);
+        doc.text(`Page ${i} / ${totalPdfPages}`, pageWidth - margin, pageHeight - 7, { align: 'right' });
+      }
+
+      doc.save(`etat_electoral_${new Date().toISOString().slice(0, 10)}.pdf`);
+      toast.success('PDF généré avec succès');
+    } catch (err) {
+      console.error(err);
+      toast.error('Erreur lors de la génération du PDF');
+    } finally {
+      setGenerating(false);
+    }
   };
 
   return (
@@ -175,27 +314,22 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={() => setShowPreview(true)} disabled={selectedFields.length === 0} className="gap-1.5">
+            <Button onClick={() => setShowPreview(true)} disabled={selectedFields.length === 0} variant="outline" className="gap-1.5">
               <FileText className="h-3.5 w-3.5" /> Aperçu
             </Button>
-            {showPreview && (
-              <Button variant="outline" onClick={handlePrint} className="gap-1.5">
-                <Printer className="h-3.5 w-3.5" /> Imprimer
-              </Button>
-            )}
           </div>
         </CardContent>
       </Card>
 
       {/* Report Preview - AdminLTE v3 style */}
       {showPreview && (
-        <div className="print:m-0" id="report-preview">
+        <div id="report-preview">
           {/* AdminLTE Card */}
           <div className="bg-card rounded shadow-sm border overflow-hidden">
             {/* Card Header - AdminLTE style */}
             <div className="bg-primary/10 border-b px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary print:hidden" />
+                <FileText className="h-4 w-4 text-primary" />
                 <span className="font-semibold text-sm">État électoral</span>
               </div>
               <span className="text-xs text-muted-foreground">{filtered.length} enregistrement(s)</span>
@@ -265,7 +399,7 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
             </div>
 
             {/* Pagination Footer - AdminLTE v3 style */}
-            <div className="px-4 py-3 border-t bg-muted/10 flex flex-col sm:flex-row items-center justify-between gap-3 print:hidden">
+            <div className="px-4 py-3 border-t bg-muted/10 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>Afficher</span>
                 <Select value={String(pageSize)} onValueChange={v => { setPageSize(Number(v)); setCurrentPage(1); }}>
@@ -279,43 +413,35 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
 
               {totalPages > 1 && (
                 <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => goToPage(currentPage - 1)}
-                    disabled={currentPage === 1}
-                  >
+                  <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>
                     <ChevronLeft className="h-3.5 w-3.5" />
                   </Button>
-
                   {getPageNumbers().map((page, i) =>
                     typeof page === 'string' ? (
                       <span key={`ellipsis-${i}`} className="px-1 text-xs text-muted-foreground">...</span>
                     ) : (
-                      <Button
-                        key={page}
-                        variant={currentPage === page ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 w-7 p-0 text-xs"
-                        onClick={() => goToPage(page)}
-                      >
+                      <Button key={page} variant={currentPage === page ? "default" : "outline"} size="sm" className="h-7 w-7 p-0 text-xs" onClick={() => goToPage(page)}>
                         {page}
                       </Button>
                     )
                   )}
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 w-7 p-0"
-                    onClick={() => goToPage(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                  >
+                  <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>
                     <ChevronRight className="h-3.5 w-3.5" />
                   </Button>
                 </div>
               )}
+            </div>
+
+            {/* PDF Generation Button at bottom */}
+            <div className="px-4 py-3 border-t bg-muted/5 flex justify-end">
+              <Button
+                onClick={generatePDF}
+                disabled={generating || selectedFields.length === 0}
+                className="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 font-semibold"
+              >
+                <Download className="h-4 w-4" />
+                {generating ? 'Génération en cours...' : 'Générer PDF'}
+              </Button>
             </div>
           </div>
         </div>

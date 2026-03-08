@@ -6,7 +6,7 @@ const AMIRI_FONT_URL = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/amiri/
 
 let cachedFontBase64: string | null = null;
 
-async function loadArabicFont(): Promise<string> {
+export async function loadArabicFont(): Promise<string> {
   if (cachedFontBase64) return cachedFontBase64;
   const response = await fetch(AMIRI_FONT_URL);
   const buffer = await response.arrayBuffer();
@@ -19,7 +19,7 @@ async function loadArabicFont(): Promise<string> {
   return cachedFontBase64;
 }
 
-function setupArabicFont(doc: jsPDF, fontBase64: string) {
+export function setupArabicFont(doc: jsPDF, fontBase64: string) {
   doc.addFileToVFS('Amiri-Regular.ttf', fontBase64);
   doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
   doc.setFont('Amiri');
@@ -79,7 +79,7 @@ function canConnect(code: number, side: 'right' | 'left'): boolean {
   return forms[1] !== null;
 }
 
-function reshapeArabic(text: string): string {
+export function reshapeArabic(text: string): string {
   if (!text) return text;
   if (!/[\u0600-\u06FF]/.test(text)) return text;
 
