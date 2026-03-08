@@ -134,11 +134,17 @@ const AppSidebar = ({ activeView, onViewChange, voterCount, hasData }: AppSideba
         </Collapsible>
       </SidebarContent>
 
-      <SidebarFooter className="p-3">
-        <div className="flex items-center justify-between">
-          {!collapsed && <ThemeToggle />}
-          {collapsed && <ThemeToggle />}
-        </div>
+      <SidebarFooter className="p-3 space-y-2">
+        <ThemeToggle />
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full justify-start gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+          onClick={handleLogout}
+        >
+          <LogOut className="h-4 w-4" />
+          {!collapsed && <span>Déconnexion</span>}
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
