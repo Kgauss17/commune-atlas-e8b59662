@@ -15,6 +15,7 @@ const PAGE_SIZE_OPTIONS = [50, 100, 500, 1000, 5000];
 
 type SortKey = keyof Voter | null;
 type SortDir = 'asc' | 'desc';
+type ColKey = keyof Voter;
 
 const COLUMNS: { key: keyof Voter; label: string; width: string; mono?: boolean }[] = [
   { key: 'orderNumber', label: 'الرقم الترتيبي', width: 'w-16', mono: true },
