@@ -32,11 +32,11 @@ const Index = () => {
       if (search) {
         const q = search.toLowerCase();
         const match =
-          (v.cin || '').toLowerCase().includes(q) ||
-          (v.firstName || '').toLowerCase().includes(q) ||
-          (v.lastName || '').toLowerCase().includes(q) ||
-          (v.address || '').toLowerCase().includes(q) ||
-          (v.bvAddress || '').toLowerCase().includes(q);
+          String(v.cin ?? '').toLowerCase().includes(q) ||
+          String(v.firstName ?? '').toLowerCase().includes(q) ||
+          String(v.lastName ?? '').toLowerCase().includes(q) ||
+          String(v.address ?? '').toLowerCase().includes(q) ||
+          String(v.bvAddress ?? '').toLowerCase().includes(q);
         if (!match) return false;
       }
       if (commune !== '__all__' && v.commune !== commune) return false;
