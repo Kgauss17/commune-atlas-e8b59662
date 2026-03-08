@@ -32,8 +32,13 @@ const ChartsView = ({ voters }: ChartsViewProps) => {
     const map = new Map<string, number>();
     voters.forEach((v) => map.set(v.circonscription, (map.get(v.circonscription) || 0) + 1));
     return Array.from(map.entries())
-      .map(([name, value]) => ({ name: `Circ. ${name}`, value }))
-      .sort((a, b) => b.value - a.value);
+      .map(([name, value]) => ({ name: `Circ. ${name}`, rawName: name, value }))
+      .sort((a, b) => {
+        const numA = parseInt(a.rawName, 10);
+        const numB = parseInt(b.rawName, 10);
+        if (!isNaN(numA) && !isNaN(numB)) return numA - numB;
+        return a.rawName.localeCompare(b.rawName);
+      });
   }, [voters]);
 
   const genderData = useMemo(() => {
