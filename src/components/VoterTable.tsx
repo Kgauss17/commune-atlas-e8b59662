@@ -151,7 +151,7 @@ const VoterTable = ({ voters }: VoterTableProps) => {
         <div ref={parentRef} className="overflow-auto" style={{ maxHeight: listHeight + HEADER_HEIGHT }}>
           <div style={{ minWidth: MIN_ROW_WIDTH }}>
             {/* Table Header */}
-            <div className="flex items-center bg-muted/40 border-b border-border sticky top-0 z-[1]" style={{ height: HEADER_HEIGHT }}>
+            <div className="flex items-center bg-card border-b-2 border-border sticky top-0 z-10 shadow-sm" style={{ height: HEADER_HEIGHT }}>
               {COLUMNS.map((col, i) => (
                 <div
                   key={i}
