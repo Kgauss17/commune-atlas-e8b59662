@@ -66,6 +66,8 @@ const Index = () => {
         return <ChartsView voters={filtered} />;
       case 'map':
         return <MapView voters={filtered} />;
+      case 'report':
+        return <ReportBuilder voters={voters} />;
       case 'duplicates':
         return <DuplicatesView voters={filtered} />;
       case 'compare':

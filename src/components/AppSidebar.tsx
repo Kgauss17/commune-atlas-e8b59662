@@ -38,6 +38,7 @@ const mainNav = [
 const analysisNav = [
   { id: 'charts', label: 'Graphiques', icon: PieChart },
   { id: 'map', label: 'Carte', icon: Map },
+  { id: 'report', label: 'Créer un état', icon: FileText },
   { id: 'duplicates', label: 'Doublons', icon: Copy },
   { id: 'compare', label: 'Comparer', icon: GitCompare },
   { id: 'history', label: 'Historique imports', icon: History },
