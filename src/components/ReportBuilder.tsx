@@ -189,15 +189,15 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         styles: {
           fontSize: 12,
           cellPadding: colCount > 10 ? 1.5 : 2,
-          font: 'times',
+          font: 'Amiri',
           halign: 'right',
           overflow: 'linebreak',
         },
         headStyles: {
-          fillColor: [52, 58, 64], // AdminLTE v3 dark header
+          fillColor: [52, 58, 64],
           textColor: [255, 255, 255],
-          font: 'times',
-          fontStyle: 'bold',
+          font: 'Amiri',
+          fontStyle: 'normal',
           halign: 'right',
           fontSize: 12,
         },
