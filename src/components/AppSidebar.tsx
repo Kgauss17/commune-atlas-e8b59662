@@ -18,6 +18,7 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Button } from '@/components/ui/button';
 import ThemeToggle from '@/components/ThemeToggle';
 
 interface AppSidebarProps {
