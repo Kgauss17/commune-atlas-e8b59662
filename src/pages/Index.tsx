@@ -12,7 +12,7 @@ import MatrixView from '@/components/MatrixView';
 import Dashboard from '@/components/Dashboard';
 import { generateVoterPDF, generateMatrixPDF } from '@/lib/pdfGenerator';
 import { exportVotersToExcel } from '@/lib/excelExporter';
-import { loadVoters, saveVoters } from '@/lib/storage';
+import { loadVoters, clearVoters, clearImportHistory } from '@/lib/storage';
 import ChartsView from '@/components/ChartsView';
 import DuplicatesView from '@/components/DuplicatesView';
 import CompareView from '@/components/CompareView';
