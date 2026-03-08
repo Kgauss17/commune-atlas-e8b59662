@@ -209,52 +209,58 @@ const VoterTable = ({ voters }: VoterTableProps) => {
                     virtualRow.index % 2 === 0 ? 'bg-card' : 'bg-muted/15'
                   } hover:bg-primary/5 transition-colors`}
                 >
-                  {/* # */}
-                  <div className="w-12 px-3 font-mono text-xs text-muted-foreground shrink-0">
-                    {globalIndex + 1}
-                  </div>
-                  {/* CIN */}
-                  <div className="w-28 px-3 shrink-0 truncate">
-                    <span className="font-mono text-xs font-semibold bg-muted/30 px-1.5 py-0.5 rounded">
-                      {v.cin}
-                    </span>
-                  </div>
-                  {/* Nom */}
-                  <div className="w-32 px-3 shrink-0 truncate font-medium text-card-foreground">{v.lastName}</div>
-                  {/* Prénom */}
-                  <div className="w-32 px-3 shrink-0 truncate">{v.firstName}</div>
-                  {/* Genre */}
-                  <div className="w-20 px-3 shrink-0">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      v.gender === 'ذ' || v.gender === 'm' || v.gender === 'M'
-                        ? 'bg-info/15 text-info'
-                        : 'bg-destructive/15 text-destructive'
-                    }`}>
-                      {v.gender === 'ذ' || v.gender === 'm' || v.gender === 'M' ? '♂ ذكر' : '♀ أنثى'}
-                    </span>
-                  </div>
-                  {/* Commune */}
-                  <div className="w-36 px-3 shrink-0 truncate">
-                    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${hashColor(v.commune, COMMUNE_COLORS)}`}>
-                      {v.commune}
-                    </span>
-                  </div>
-                  {/* Circonscription */}
-                  <div className="w-24 px-3 shrink-0 truncate">
-                    <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-mono font-medium ${hashColor(v.circonscription, CIRCONS_COLORS)}`}>
-                      {v.circonscription}
-                    </span>
-                  </div>
-                  {/* BV */}
-                  <div className="w-28 px-3 font-mono text-xs shrink-0 truncate">{v.bvName}</div>
-                  {/* Adresse BV */}
-                  <div className="flex-1 min-w-[180px] px-3 text-xs text-muted-foreground truncate">{v.bvAddress}</div>
-                  {/* Province */}
-                  <div className="w-32 px-3 shrink-0 truncate">
-                    <span className="text-xs bg-secondary/20 text-secondary-foreground px-2 py-0.5 rounded">
-                      {v.province}
-                    </span>
-                  </div>
+                  {COLUMNS.map((col, ci) => {
+                    const val = String(v[col.key] ?? '');
+                    // Special rendering for certain columns
+                    if (col.key === 'orderNumber') {
+                      return <div key={ci} className={`${col.width} px-3 font-mono text-xs text-muted-foreground shrink-0`}>{val}</div>;
+                    }
+                    if (col.key === 'cin') {
+                      return (
+                        <div key={ci} className={`${col.width} px-3 shrink-0 truncate`}>
+                          <span className="font-mono text-xs font-semibold bg-muted/30 px-1.5 py-0.5 rounded">{val}</span>
+                        </div>
+                      );
+                    }
+                    if (col.key === 'gender') {
+                      const isMale = val === 'ذ' || val === 'm' || val === 'M';
+                      return (
+                        <div key={ci} className={`${col.width} px-3 shrink-0`}>
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isMale ? 'bg-info/15 text-info' : 'bg-destructive/15 text-destructive'}`}>
+                            {isMale ? '♂ ذكر' : '♀ أنثى'}
+                          </span>
+                        </div>
+                      );
+                    }
+                    if (col.key === 'commune') {
+                      return (
+                        <div key={ci} className={`${col.width} px-3 shrink-0 truncate`}>
+                          <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${hashColor(val, COMMUNE_COLORS)}`}>{val}</span>
+                        </div>
+                      );
+                    }
+                    if (col.key === 'circonscription') {
+                      return (
+                        <div key={ci} className={`${col.width} px-3 shrink-0 truncate`}>
+                          <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-mono font-medium ${hashColor(val, CIRCONS_COLORS)}`}>{val}</span>
+                        </div>
+                      );
+                    }
+                    if (col.key === 'province') {
+                      return (
+                        <div key={ci} className={`${col.width} px-3 shrink-0 truncate`}>
+                          <span className="text-xs bg-secondary/20 text-secondary-foreground px-2 py-0.5 rounded">{val}</span>
+                        </div>
+                      );
+                    }
+                    if (col.key === 'lastName') {
+                      return <div key={ci} className={`${col.width} px-3 shrink-0 truncate font-medium text-card-foreground`}>{val}</div>;
+                    }
+                    // Default cell
+                    return (
+                      <div key={ci} className={`${col.width} px-3 shrink-0 truncate ${col.mono ? 'font-mono text-xs' : 'text-sm'}`}>{val}</div>
+                    );
+                  })}
                 </div>
               );
             })}
