@@ -17,6 +17,7 @@ import ChartsView from '@/components/ChartsView';
 import DuplicatesView from '@/components/DuplicatesView';
 import CompareView from '@/components/CompareView';
 import MapView from '@/components/MapView';
+import ReportBuilder from '@/components/ReportBuilder';
 import type { Voter } from '@/types/voter';
 import { toast } from 'sonner';
 
