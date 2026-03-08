@@ -147,101 +147,85 @@ const VoterTable = ({ voters }: VoterTableProps) => {
           </div>
         </div>
 
-        {/* Table Header */}
-        <div className="flex items-center bg-muted/40 border-b border-border" style={{ height: HEADER_HEIGHT }}>
-          {COLUMNS.map((col, i) => (
-            <div
-              key={i}
-              className={`${col.width} px-3 font-semibold text-xs text-muted-foreground shrink-0 ${col.key ? 'cursor-pointer select-none hover:text-foreground transition-colors' : ''} flex items-center gap-1 uppercase tracking-wide`}
-              onClick={() => handleSort(col.key)}
-            >
-              {col.label}
-              <SortIcon col={col.key} />
-            </div>
-          ))}
-        </div>
-
-        {/* Virtualized body */}
-        <div
-          ref={parentRef}
-          className="overflow-auto"
-          style={{ height: Math.min(listHeight, paged.length * ROW_HEIGHT) }}
-        >
-          <div style={{ height: `${virtualizer.getTotalSize()}px`, width: '100%', position: 'relative' }}>
-            {virtualizer.getVirtualItems().map((virtualRow) => {
-              const v = paged[virtualRow.index];
-              if (!v) return null;
-              
-              return (
+        {/* Scrollable wrapper for header + body together */}
+        <div ref={parentRef} className="overflow-auto" style={{ maxHeight: listHeight + HEADER_HEIGHT }}>
+          <div style={{ minWidth: MIN_ROW_WIDTH }}>
+            {/* Table Header */}
+            <div className="flex items-center bg-muted/40 border-b border-border sticky top-0 z-[1]" style={{ height: HEADER_HEIGHT }}>
+              {COLUMNS.map((col, i) => (
                 <div
-                  key={virtualRow.key}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                  className={`flex items-center border-b border-border/50 text-sm ${
-                    virtualRow.index % 2 === 0 ? 'bg-card' : 'bg-muted/15'
-                  } hover:bg-primary/5 transition-colors`}
+                  key={i}
+                  className={`${col.width} px-2 font-semibold text-xs text-muted-foreground shrink-0 cursor-pointer select-none hover:text-foreground transition-colors flex items-center gap-1`}
+                  onClick={() => handleSort(col.key)}
                 >
-                  {COLUMNS.map((col, ci) => {
-                    const val = String(v[col.key] ?? '');
-                    // Special rendering for certain columns
-                    if (col.key === 'orderNumber') {
-                      return <div key={ci} className={`${col.width} px-3 font-mono text-xs text-muted-foreground shrink-0`}>{val}</div>;
-                    }
-                    if (col.key === 'cin') {
-                      return (
-                        <div key={ci} className={`${col.width} px-3 shrink-0 truncate`}>
-                          <span className="font-mono text-xs font-semibold bg-muted/30 px-1.5 py-0.5 rounded">{val}</span>
-                        </div>
-                      );
-                    }
-                    if (col.key === 'gender') {
-                      const isMale = val === 'ذ' || val === 'm' || val === 'M';
-                      return (
-                        <div key={ci} className={`${col.width} px-3 shrink-0`}>
-                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isMale ? 'bg-info/15 text-info' : 'bg-destructive/15 text-destructive'}`}>
-                            {isMale ? '♂ ذكر' : '♀ أنثى'}
-                          </span>
-                        </div>
-                      );
-                    }
-                    if (col.key === 'commune') {
-                      return (
-                        <div key={ci} className={`${col.width} px-3 shrink-0 truncate`}>
-                          <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-medium ${hashColor(val, COMMUNE_COLORS)}`}>{val}</span>
-                        </div>
-                      );
-                    }
-                    if (col.key === 'circonscription') {
-                      return (
-                        <div key={ci} className={`${col.width} px-3 shrink-0 truncate`}>
-                          <span className={`inline-flex items-center rounded px-2 py-0.5 text-xs font-mono font-medium ${hashColor(val, CIRCONS_COLORS)}`}>{val}</span>
-                        </div>
-                      );
-                    }
-                    if (col.key === 'province') {
-                      return (
-                        <div key={ci} className={`${col.width} px-3 shrink-0 truncate`}>
-                          <span className="text-xs bg-secondary/20 text-secondary-foreground px-2 py-0.5 rounded">{val}</span>
-                        </div>
-                      );
-                    }
-                    if (col.key === 'lastName') {
-                      return <div key={ci} className={`${col.width} px-3 shrink-0 truncate font-medium text-card-foreground`}>{val}</div>;
-                    }
-                    // Default cell
-                    return (
-                      <div key={ci} className={`${col.width} px-3 shrink-0 truncate ${col.mono ? 'font-mono text-xs' : 'text-sm'}`}>{val}</div>
-                    );
-                  })}
+                  {col.label}
+                  <SortIcon col={col.key} />
                 </div>
-              );
-            })}
+              ))}
+            </div>
+
+            {/* Virtualized body */}
+            <div style={{ height: `${virtualizer.getTotalSize()}px`, position: 'relative' }}>
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const v = paged[virtualRow.index];
+                if (!v) return null;
+                return (
+                  <div
+                    key={virtualRow.key}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      height: `${virtualRow.size}px`,
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                    className={`flex items-center border-b border-border/50 text-sm ${
+                      virtualRow.index % 2 === 0 ? 'bg-card' : 'bg-muted/15'
+                    } hover:bg-primary/5 transition-colors`}
+                  >
+                    {COLUMNS.map((col, ci) => {
+                      const val = String(v[col.key] ?? '');
+                      // CIN - blue label
+                      if (col.key === 'cin') {
+                        return (
+                          <div key={ci} className={`${col.width} px-2 shrink-0 truncate`}>
+                            <span className="font-mono text-xs font-semibold bg-info/15 text-info px-1.5 py-0.5 rounded">{val}</span>
+                          </div>
+                        );
+                      }
+                      // Commune - blue label
+                      if (col.key === 'commune') {
+                        return (
+                          <div key={ci} className={`${col.width} px-2 shrink-0 truncate`}>
+                            <span className="inline-flex items-center rounded px-2 py-0.5 text-xs font-medium bg-info/15 text-info">{val}</span>
+                          </div>
+                        );
+                      }
+                      // Gender badge
+                      if (col.key === 'gender') {
+                        const isMale = val === 'ذ' || val === 'm' || val === 'M';
+                        return (
+                          <div key={ci} className={`${col.width} px-2 shrink-0`}>
+                            <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${isMale ? 'bg-muted/30 text-card-foreground' : 'bg-muted/30 text-card-foreground'}`}>
+                              {isMale ? 'ذ' : 'أ'}
+                            </span>
+                          </div>
+                        );
+                      }
+                      // Order number
+                      if (col.key === 'orderNumber') {
+                        return <div key={ci} className={`${col.width} px-2 font-mono text-xs text-muted-foreground shrink-0`}>{val}</div>;
+                      }
+                      // Default cell
+                      return (
+                        <div key={ci} className={`${col.width} px-2 shrink-0 truncate ${col.mono ? 'font-mono text-xs' : 'text-sm'}`}>{val}</div>
+                      );
+                    })}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
 
