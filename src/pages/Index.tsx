@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { FileText, BarChart3, Download } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { FileText, BarChart3, Download, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/AppSidebar';
