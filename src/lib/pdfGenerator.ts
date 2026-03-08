@@ -1,6 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import type { Voter, MatrixRow } from '@/types/voter';
+import type { Voter } from '@/types/voter';
 
 const AMIRI_FONT_URL = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/amiri/Amiri-Regular.ttf';
 
@@ -29,43 +29,43 @@ function setupArabicFont(doc: jsPDF, fontBase64: string) {
 
 // Arabic letter forms mapping for reshaping
 const arabicForms: Record<number, [number, number | null, number | null, number | null]> = {
-  0x0621: [0xFE80, null, null, null], // HAMZA
-  0x0622: [0xFE81, null, null, 0xFE82], // ALEF_MADDA
-  0x0623: [0xFE83, null, null, 0xFE84], // ALEF_HAMZA_ABOVE
-  0x0624: [0xFE85, null, null, 0xFE86], // WAW_HAMZA
-  0x0625: [0xFE87, null, null, 0xFE88], // ALEF_HAMZA_BELOW
-  0x0626: [0xFE89, 0xFE8B, 0xFE8C, 0xFE8A], // YEH_HAMZA
-  0x0627: [0xFE8D, null, null, 0xFE8E], // ALEF
-  0x0628: [0xFE8F, 0xFE91, 0xFE92, 0xFE90], // BEH
-  0x0629: [0xFE93, null, null, 0xFE94], // TEH_MARBUTA
-  0x062A: [0xFE95, 0xFE97, 0xFE98, 0xFE96], // TEH
-  0x062B: [0xFE99, 0xFE9B, 0xFE9C, 0xFE9A], // THEH
-  0x062C: [0xFE9D, 0xFE9F, 0xFEA0, 0xFE9E], // JEEM
-  0x062D: [0xFEA1, 0xFEA3, 0xFEA4, 0xFEA2], // HAH
-  0x062E: [0xFEA5, 0xFEA7, 0xFEA8, 0xFEA6], // KHAH
-  0x062F: [0xFEA9, null, null, 0xFEAA], // DAL
-  0x0630: [0xFEAB, null, null, 0xFEAC], // THAL
-  0x0631: [0xFEAD, null, null, 0xFEAE], // REH
-  0x0632: [0xFEAF, null, null, 0xFEB0], // ZAIN
-  0x0633: [0xFEB1, 0xFEB3, 0xFEB4, 0xFEB2], // SEEN
-  0x0634: [0xFEB5, 0xFEB7, 0xFEB8, 0xFEB6], // SHEEN
-  0x0635: [0xFEB9, 0xFEBB, 0xFEBC, 0xFEBA], // SAD
-  0x0636: [0xFEBD, 0xFEBF, 0xFEC0, 0xFEBE], // DAD
-  0x0637: [0xFEC1, 0xFEC3, 0xFEC4, 0xFEC2], // TAH
-  0x0638: [0xFEC5, 0xFEC7, 0xFEC8, 0xFEC6], // ZAH
-  0x0639: [0xFEC9, 0xFECB, 0xFECC, 0xFECA], // AIN
-  0x063A: [0xFECD, 0xFECF, 0xFED0, 0xFECE], // GHAIN
-  0x0640: [0x0640, null, null, null], // TATWEEL
-  0x0641: [0xFED1, 0xFED3, 0xFED4, 0xFED2], // FEH
-  0x0642: [0xFED5, 0xFED7, 0xFED8, 0xFED6], // QAF
-  0x0643: [0xFED9, 0xFEDB, 0xFEDC, 0xFEDA], // KAF
-  0x0644: [0xFEDD, 0xFEDF, 0xFEE0, 0xFEDE], // LAM
-  0x0645: [0xFEE1, 0xFEE3, 0xFEE4, 0xFEE2], // MEEM
-  0x0646: [0xFEE5, 0xFEE7, 0xFEE8, 0xFEE6], // NOON
-  0x0647: [0xFEE9, 0xFEEB, 0xFEEC, 0xFEEA], // HEH
-  0x0648: [0xFEED, null, null, 0xFEEE], // WAW
-  0x0649: [0xFEEF, null, null, 0xFEF0], // ALEF_MAKSURA
-  0x064A: [0xFEF1, 0xFEF3, 0xFEF4, 0xFEF2], // YEH
+  0x0621: [0xFE80, null, null, null],
+  0x0622: [0xFE81, null, null, 0xFE82],
+  0x0623: [0xFE83, null, null, 0xFE84],
+  0x0624: [0xFE85, null, null, 0xFE86],
+  0x0625: [0xFE87, null, null, 0xFE88],
+  0x0626: [0xFE89, 0xFE8B, 0xFE8C, 0xFE8A],
+  0x0627: [0xFE8D, null, null, 0xFE8E],
+  0x0628: [0xFE8F, 0xFE91, 0xFE92, 0xFE90],
+  0x0629: [0xFE93, null, null, 0xFE94],
+  0x062A: [0xFE95, 0xFE97, 0xFE98, 0xFE96],
+  0x062B: [0xFE99, 0xFE9B, 0xFE9C, 0xFE9A],
+  0x062C: [0xFE9D, 0xFE9F, 0xFEA0, 0xFE9E],
+  0x062D: [0xFEA1, 0xFEA3, 0xFEA4, 0xFEA2],
+  0x062E: [0xFEA5, 0xFEA7, 0xFEA8, 0xFEA6],
+  0x062F: [0xFEA9, null, null, 0xFEAA],
+  0x0630: [0xFEAB, null, null, 0xFEAC],
+  0x0631: [0xFEAD, null, null, 0xFEAE],
+  0x0632: [0xFEAF, null, null, 0xFEB0],
+  0x0633: [0xFEB1, 0xFEB3, 0xFEB4, 0xFEB2],
+  0x0634: [0xFEB5, 0xFEB7, 0xFEB8, 0xFEB6],
+  0x0635: [0xFEB9, 0xFEBB, 0xFEBC, 0xFEBA],
+  0x0636: [0xFEBD, 0xFEBF, 0xFEC0, 0xFEBE],
+  0x0637: [0xFEC1, 0xFEC3, 0xFEC4, 0xFEC2],
+  0x0638: [0xFEC5, 0xFEC7, 0xFEC8, 0xFEC6],
+  0x0639: [0xFEC9, 0xFECB, 0xFECC, 0xFECA],
+  0x063A: [0xFECD, 0xFECF, 0xFED0, 0xFECE],
+  0x0640: [0x0640, null, null, null],
+  0x0641: [0xFED1, 0xFED3, 0xFED4, 0xFED2],
+  0x0642: [0xFED5, 0xFED7, 0xFED8, 0xFED6],
+  0x0643: [0xFED9, 0xFEDB, 0xFEDC, 0xFEDA],
+  0x0644: [0xFEDD, 0xFEDF, 0xFEE0, 0xFEDE],
+  0x0645: [0xFEE1, 0xFEE3, 0xFEE4, 0xFEE2],
+  0x0646: [0xFEE5, 0xFEE7, 0xFEE8, 0xFEE6],
+  0x0647: [0xFEE9, 0xFEEB, 0xFEEC, 0xFEEA],
+  0x0648: [0xFEED, null, null, 0xFEEE],
+  0x0649: [0xFEEF, null, null, 0xFEF0],
+  0x064A: [0xFEF1, 0xFEF3, 0xFEF4, 0xFEF2],
 };
 
 function isArabicChar(code: number): boolean {
@@ -75,8 +75,8 @@ function isArabicChar(code: number): boolean {
 function canConnect(code: number, side: 'right' | 'left'): boolean {
   const forms = arabicForms[code];
   if (!forms) return false;
-  if (side === 'right') return forms[3] !== null; // has final form = can connect to right
-  return forms[1] !== null; // has initial form = can connect to left
+  if (side === 'right') return forms[3] !== null;
+  return forms[1] !== null;
 }
 
 function reshapeArabic(text: string): string {
@@ -103,20 +103,107 @@ function reshapeArabic(text: string): string {
 
     let formIndex: number;
     if (prevConnects && nextConnects && forms[2] !== null) {
-      formIndex = 2; // medial
+      formIndex = 2;
     } else if (prevConnects && forms[3] !== null) {
-      formIndex = 3; // final
+      formIndex = 3;
     } else if (nextConnects && forms[1] !== null) {
-      formIndex = 1; // initial
+      formIndex = 1;
     } else {
-      formIndex = 0; // isolated
+      formIndex = 0;
     }
 
     result += String.fromCharCode(forms[formIndex]!);
   }
 
-  // Reverse for RTL display
   return result.split('').reverse().join('');
+}
+
+// Enhanced PDF header with professional styling
+interface PdfHeaderOptions {
+  title: string;
+  subtitle?: string;
+  date?: boolean;
+  totalCount?: number;
+}
+
+function addEnhancedHeader(doc: jsPDF, fontBase64: string, options: PdfHeaderOptions): number {
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  // Top accent bar
+  doc.setFillColor(41, 121, 204);
+  doc.rect(0, 0, pageWidth, 4, 'F');
+
+  // Header background
+  doc.setFillColor(245, 247, 250);
+  doc.rect(0, 4, pageWidth, 35, 'F');
+
+  // Logo placeholder circle
+  doc.setFillColor(41, 121, 204);
+  doc.circle(pageWidth / 2, 16, 6, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(8);
+  doc.text('GE', pageWidth / 2, 18, { align: 'center' });
+
+  // Title
+  doc.setTextColor(30, 30, 30);
+  doc.setFontSize(14);
+  doc.text(reshapeArabic(options.title), pageWidth / 2, 30, { align: 'center' });
+
+  // Subtitle line
+  let yPos = 34;
+  if (options.subtitle) {
+    doc.setFontSize(9);
+    doc.setTextColor(100, 100, 100);
+    doc.text(options.subtitle, pageWidth / 2, yPos, { align: 'center' });
+    yPos += 4;
+  }
+
+  // Date and count line
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 120);
+  const infoParts: string[] = [];
+  if (options.date !== false) {
+    infoParts.push(`Date: ${new Date().toLocaleDateString('fr-FR')}`);
+  }
+  if (options.totalCount !== undefined) {
+    infoParts.push(`Total: ${options.totalCount.toLocaleString()}`);
+  }
+  if (infoParts.length > 0) {
+    doc.text(infoParts.join('  |  '), pageWidth / 2, yPos + 4, { align: 'center' });
+  }
+
+  // Separator line
+  doc.setDrawColor(200, 200, 200);
+  doc.setLineWidth(0.3);
+  doc.line(15, 42, pageWidth - 15, 42);
+
+  // Footer on each page
+  const totalPages = (doc as any).internal.getNumberOfPages?.() || 1;
+  doc.setFontSize(7);
+  doc.setTextColor(150, 150, 150);
+  doc.text('Gestion Électorale - Rapport généré automatiquement', 15, pageHeight - 8);
+  doc.text(`Page 1`, pageWidth - 15, pageHeight - 8, { align: 'right' });
+
+  return 45; // startY for content
+}
+
+function addPageFooters(doc: jsPDF) {
+  const pageCount = (doc as any).internal.getNumberOfPages();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFontSize(7);
+    doc.setTextColor(150, 150, 150);
+    doc.text('Gestion Électorale - Rapport généré automatiquement', 15, pageHeight - 8);
+    doc.text(`Page ${i} / ${pageCount}`, pageWidth - 15, pageHeight - 8, { align: 'right' });
+
+    // Bottom accent bar
+    doc.setFillColor(41, 121, 204);
+    doc.rect(0, pageHeight - 3, pageWidth, 3, 'F');
+  }
 }
 
 export async function generateVoterPDF(voters: Voter[], title: string) {
@@ -124,13 +211,14 @@ export async function generateVoterPDF(voters: Voter[], title: string) {
   const doc = new jsPDF({ orientation: 'landscape' });
   setupArabicFont(doc, fontBase64);
 
-  doc.setFontSize(16);
-  doc.text(reshapeArabic(title), doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-  doc.setFontSize(10);
-  doc.text(`Total: ${voters.length}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+  const startY = addEnhancedHeader(doc, fontBase64, {
+    title,
+    subtitle: 'Liste détaillée des électeurs inscrits',
+    totalCount: voters.length,
+  });
 
   autoTable(doc, {
-    startY: 28,
+    startY,
     head: [['#', 'CIN', reshapeArabic('الاسم العائلي'), reshapeArabic('الاسم الشخصي'), reshapeArabic('الجنس'), reshapeArabic('الجماعة'), reshapeArabic('الدائرة'), reshapeArabic('مكتب التصويت'), reshapeArabic('عنوان مكتب التصويت')]],
     body: voters.map((v, i) => [
       i + 1,
@@ -148,6 +236,7 @@ export async function generateVoterPDF(voters: Voter[], title: string) {
     alternateRowStyles: { fillColor: [245, 247, 250] },
   });
 
+  addPageFooters(doc);
   doc.save(`${title.replace(/\s+/g, '_')}.pdf`);
 }
 
@@ -155,6 +244,12 @@ export async function generateMatrixPDF(voters: Voter[]) {
   const fontBase64 = await loadArabicFont();
   const doc = new jsPDF({ orientation: 'landscape' });
   setupArabicFont(doc, fontBase64);
+
+  const startY = addEnhancedHeader(doc, fontBase64, {
+    title: 'حالة المصفوفة - عدد الناخبين',
+    subtitle: 'Matrice croisée Communes × Bureaux de vote',
+    totalCount: voters.length,
+  });
 
   // Build pivot data
   const communeSet = new Set<string>();
@@ -177,7 +272,6 @@ export async function generateMatrixPDF(voters: Voter[]) {
     bvs.forEach((bv) => bvList.push({ name: bv, circons: c }));
   });
 
-  // Header row 1: الجماعة + circonscriptions merged + المجموع
   const headerRow1: any[] = [{ content: reshapeArabic('الجماعة'), rowSpan: 2, styles: { halign: 'right', fillColor: [41, 121, 204], textColor: [255, 255, 255], font: 'Amiri', fontStyle: 'normal' } }];
   circonsKeys.forEach((c) => {
     const span = circBvMap.get(c)!.size;
@@ -185,13 +279,11 @@ export async function generateMatrixPDF(voters: Voter[]) {
   });
   headerRow1.push({ content: reshapeArabic('المجموع'), rowSpan: 2, styles: { halign: 'center', fillColor: [41, 121, 204], textColor: [255, 255, 255], font: 'Amiri', fontStyle: 'normal' } });
 
-  // Header row 2: BV names
   const headerRow2: any[] = bvList.map((bv) => ({
     content: reshapeArabic(bv.name),
     styles: { halign: 'center', fillColor: [60, 140, 220], textColor: [255, 255, 255], font: 'Amiri', fontStyle: 'normal', fontSize: 7 },
   }));
 
-  // Body rows
   const body = communes.map((com) => {
     const row: any[] = [reshapeArabic(com)];
     let rowTotal = 0;
@@ -204,7 +296,6 @@ export async function generateMatrixPDF(voters: Voter[]) {
     return row;
   });
 
-  // Footer row
   const footRow: any[] = [reshapeArabic('المجموع')];
   bvList.forEach((bv) => {
     let t = 0;
@@ -213,11 +304,8 @@ export async function generateMatrixPDF(voters: Voter[]) {
   });
   footRow.push(voters.length);
 
-  doc.setFontSize(16);
-  doc.text(reshapeArabic('حالة المصفوفة - عدد الناخبين'), doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-
   autoTable(doc, {
-    startY: 25,
+    startY,
     head: [headerRow1, headerRow2],
     body,
     foot: [footRow],
@@ -228,6 +316,7 @@ export async function generateMatrixPDF(voters: Voter[]) {
     columnStyles: { 0: { halign: 'right', fontStyle: 'bold' } },
   });
 
+  addPageFooters(doc);
   doc.save('etat_matrice.pdf');
 }
 
@@ -251,10 +340,11 @@ export async function generateDuplicatesPDF(voters: Voter[]) {
   });
   duplicates.sort((a, b) => a.cin.localeCompare(b.cin));
 
-  doc.setFontSize(16);
-  doc.text(reshapeArabic('قائمة المكررين'), doc.internal.pageSize.getWidth() / 2, 15, { align: 'center' });
-  doc.setFontSize(10);
-  doc.text(`Total doublons: ${duplicates.length}`, doc.internal.pageSize.getWidth() / 2, 22, { align: 'center' });
+  const startY = addEnhancedHeader(doc, fontBase64, {
+    title: 'قائمة المكررين',
+    subtitle: `${duplicates.length} CIN en doublon détectés`,
+    totalCount: duplicates.reduce((acc, d) => acc + d.voters.length, 0),
+  });
 
   const body: any[][] = [];
   duplicates.forEach(({ voters: dupVoters }) => {
@@ -273,7 +363,7 @@ export async function generateDuplicatesPDF(voters: Voter[]) {
   });
 
   autoTable(doc, {
-    startY: 28,
+    startY,
     head: [['CIN', reshapeArabic('الاسم العائلي'), reshapeArabic('الاسم الشخصي'), reshapeArabic('الجنس'), reshapeArabic('الجماعة'), reshapeArabic('الدائرة'), reshapeArabic('مكتب التصويت'), reshapeArabic('التكرار')]],
     body,
     styles: { fontSize: 8, cellPadding: 2, font: 'Amiri', halign: 'right' },
@@ -281,5 +371,6 @@ export async function generateDuplicatesPDF(voters: Voter[]) {
     alternateRowStyles: { fillColor: [255, 245, 245] },
   });
 
+  addPageFooters(doc);
   doc.save('doublons.pdf');
 }

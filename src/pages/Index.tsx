@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileText, BarChart3, PieChart, Copy, Download } from 'lucide-react';
+import { FileText, BarChart3, PieChart, Copy, Download, Map, LayoutDashboard, GitCompare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import ImportButton from '@/components/ImportButton';
@@ -7,13 +7,15 @@ import SearchBar from '@/components/SearchBar';
 import Filters from '@/components/Filters';
 import VoterTable from '@/components/VoterTable';
 import MatrixView from '@/components/MatrixView';
-import StatsCards from '@/components/StatsCards';
+import Dashboard from '@/components/Dashboard';
 import ThemeToggle from '@/components/ThemeToggle';
 import { generateVoterPDF, generateMatrixPDF } from '@/lib/pdfGenerator';
 import { exportVotersToExcel } from '@/lib/excelExporter';
 import ChartsView from '@/components/ChartsView';
 import DuplicatesView from '@/components/DuplicatesView';
-import type { Voter, MatrixRow } from '@/types/voter';
+import CompareView from '@/components/CompareView';
+import MapView from '@/components/MapView';
+import type { Voter } from '@/types/voter';
 
 const Index = () => {
   const [voters, setVoters] = useState<Voter[]>([]);
@@ -41,20 +43,6 @@ const Index = () => {
       return true;
     });
   }, [voters, search, commune, circons]);
-
-  const matrix = useMemo<MatrixRow[]>(() => {
-    const map = new Map<string, number>();
-    filtered.forEach((v) => {
-      const key = `${v.commune}||${v.circonscription}||${v.bvName}`;
-      map.set(key, (map.get(key) || 0) + 1);
-    });
-    return Array.from(map.entries())
-      .map(([key, count]) => {
-        const [commune, circonscription, bv] = key.split('||');
-        return { commune, circonscription, bv, count };
-      })
-      .sort((a, b) => a.commune.localeCompare(b.commune) || a.circonscription.localeCompare(b.circonscription));
-  }, [filtered]);
 
   const resetFilters = () => {
     setCommune('__all__');
@@ -88,24 +76,12 @@ const Index = () => {
           </div>
         ) : (
           <>
-            <StatsCards voters={filtered} />
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
-              <SearchBar value={search} onChange={setSearch} />
-              <Filters
-                communes={communes}
-                circonscriptions={circonscriptions}
-                selectedCommune={commune}
-                selectedCirconscription={circons}
-                onCommuneChange={setCommune}
-                onCirconscriptionChange={setCircons}
-                onReset={resetFilters}
-              />
-            </div>
-
-            <Tabs defaultValue="list">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <TabsList>
+            <Tabs defaultValue="dashboard">
+              <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                <TabsList className="flex-wrap">
+                  <TabsTrigger value="dashboard" className="gap-1.5">
+                    <LayoutDashboard className="h-4 w-4" /> Tableau de bord
+                  </TabsTrigger>
                   <TabsTrigger value="list" className="gap-1.5">
                     <FileText className="h-4 w-4" /> Liste
                   </TabsTrigger>
@@ -115,8 +91,14 @@ const Index = () => {
                   <TabsTrigger value="charts" className="gap-1.5">
                     <PieChart className="h-4 w-4" /> Graphiques
                   </TabsTrigger>
+                  <TabsTrigger value="map" className="gap-1.5">
+                    <Map className="h-4 w-4" /> Carte
+                  </TabsTrigger>
                   <TabsTrigger value="duplicates" className="gap-1.5">
                     <Copy className="h-4 w-4" /> Doublons
+                  </TabsTrigger>
+                  <TabsTrigger value="compare" className="gap-1.5">
+                    <GitCompare className="h-4 w-4" /> Comparer
                   </TabsTrigger>
                 </TabsList>
                 <div className="flex gap-2 flex-wrap">
@@ -147,17 +129,40 @@ const Index = () => {
                 </div>
               </div>
 
-              <TabsContent value="list" className="mt-4">
+              {/* Search & Filters - shown for relevant tabs */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between mb-4">
+                <SearchBar value={search} onChange={setSearch} />
+                <Filters
+                  communes={communes}
+                  circonscriptions={circonscriptions}
+                  selectedCommune={commune}
+                  selectedCirconscription={circons}
+                  onCommuneChange={setCommune}
+                  onCirconscriptionChange={setCircons}
+                  onReset={resetFilters}
+                />
+              </div>
+
+              <TabsContent value="dashboard" className="mt-0">
+                <Dashboard voters={filtered} allVoters={voters} />
+              </TabsContent>
+              <TabsContent value="list" className="mt-0">
                 <VoterTable voters={filtered} />
               </TabsContent>
-              <TabsContent value="matrix" className="mt-4">
+              <TabsContent value="matrix" className="mt-0">
                 <MatrixView voters={filtered} />
               </TabsContent>
-              <TabsContent value="charts" className="mt-4">
+              <TabsContent value="charts" className="mt-0">
                 <ChartsView voters={filtered} />
               </TabsContent>
-              <TabsContent value="duplicates" className="mt-4">
+              <TabsContent value="map" className="mt-0">
+                <MapView voters={filtered} />
+              </TabsContent>
+              <TabsContent value="duplicates" className="mt-0">
                 <DuplicatesView voters={filtered} />
+              </TabsContent>
+              <TabsContent value="compare" className="mt-0">
+                <CompareView currentVoters={voters} />
               </TabsContent>
             </Tabs>
           </>
