@@ -19,7 +19,7 @@ export async function loadArabicFont(): Promise<string> {
   return cachedFontBase64;
 }
 
-function setupArabicFont(doc: jsPDF, fontBase64: string) {
+export function setupArabicFont(doc: jsPDF, fontBase64: string) {
   doc.addFileToVFS('Amiri-Regular.ttf', fontBase64);
   doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
   doc.setFont('Amiri');
