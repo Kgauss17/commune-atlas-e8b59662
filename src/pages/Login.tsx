@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Lock, User } from 'lucide-react';
 import { toast } from 'sonner';
+import armoiriesLogo from '@/assets/armoiries.png';
 
 const Login = () => {
   const [username, setUsername] = useState('');
@@ -31,7 +32,8 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'hsl(220, 25%, 14%)' }}>
       <div className="w-full max-w-sm">
         {/* Logo */}
-        <div className="text-center mb-6">
+        <div className="text-center mb-6 flex flex-col items-center">
+          <img src={armoiriesLogo} alt="المملكة المغربية" className="h-20 w-auto mb-3" />
           <h1 className="text-2xl font-bold" style={{ color: 'hsl(0, 0%, 98%)' }}>
             <span style={{ color: 'hsl(20, 90%, 48%)' }}>Gestion</span> Électorale
           </h1>
