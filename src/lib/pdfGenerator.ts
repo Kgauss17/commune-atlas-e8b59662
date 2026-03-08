@@ -79,7 +79,7 @@ function canConnect(code: number, side: 'right' | 'left'): boolean {
   return forms[1] !== null;
 }
 
-function reshapeArabic(text: string): string {
+export function reshapeArabic(text: string): string {
   if (!text) return text;
   if (!/[\u0600-\u06FF]/.test(text)) return text;
 
