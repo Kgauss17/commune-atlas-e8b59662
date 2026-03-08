@@ -6,7 +6,7 @@ const AMIRI_FONT_URL = 'https://cdn.jsdelivr.net/gh/google/fonts@main/ofl/amiri/
 
 let cachedFontBase64: string | null = null;
 
-async function loadArabicFont(): Promise<string> {
+export async function loadArabicFont(): Promise<string> {
   if (cachedFontBase64) return cachedFontBase64;
   const response = await fetch(AMIRI_FONT_URL);
   const buffer = await response.arrayBuffer();
