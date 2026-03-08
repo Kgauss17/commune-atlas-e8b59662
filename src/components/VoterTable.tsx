@@ -193,7 +193,7 @@ const VoterTable = ({ voters }: VoterTableProps) => {
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const v = paged[virtualRow.index];
               if (!v) return null;
-              const globalIndex = start + virtualRow.index;
+              
               return (
                 <div
                   key={virtualRow.key}
