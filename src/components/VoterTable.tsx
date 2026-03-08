@@ -30,11 +30,11 @@ const COLUMNS: { key: keyof Voter; label: string; width: string; mono?: boolean 
   { key: 'bvName', label: 'اسم مكتب التصويت', width: 'w-28', mono: true },
   { key: 'bvAddress', label: 'عنوان مكتب التصويت', width: 'w-36' },
   { key: 'bvLocation', label: 'مكان مكتب التصويت', width: 'w-32' },
-  { key: 'province', label: 'العمالة او الاقليم', width: 'w-32' },
+  { key: 'province', label: 'العمالة او الاقليم', width: 'w-40' },
 ];
 
 // Min total width for all columns to enable proper horizontal scroll
-const MIN_ROW_WIDTH = 1400;
+const MIN_ROW_WIDTH = 1500;
 
 const VoterTable = ({ voters }: VoterTableProps) => {
   const [page, setPage] = useState(0);
