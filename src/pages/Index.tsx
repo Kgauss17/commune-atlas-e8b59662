@@ -1,5 +1,5 @@
-import { useState, useMemo } from 'react';
-import { FileText, BarChart3, Download } from 'lucide-react';
+import { useState, useMemo, useCallback } from 'react';
+import { FileText, BarChart3, Download, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AppSidebar from '@/components/AppSidebar';
@@ -12,12 +12,13 @@ import MatrixView from '@/components/MatrixView';
 import Dashboard from '@/components/Dashboard';
 import { generateVoterPDF, generateMatrixPDF } from '@/lib/pdfGenerator';
 import { exportVotersToExcel } from '@/lib/excelExporter';
-import { loadVoters, saveVoters } from '@/lib/storage';
+import { loadVoters, clearVoters, clearImportHistory } from '@/lib/storage';
 import ChartsView from '@/components/ChartsView';
 import DuplicatesView from '@/components/DuplicatesView';
 import CompareView from '@/components/CompareView';
 import MapView from '@/components/MapView';
 import type { Voter } from '@/types/voter';
+import { toast } from 'sonner';
 
 const Index = () => {
   const [voters, setVoters] = useState<Voter[]>(() => loadVoters());
@@ -98,6 +99,14 @@ const Index = () => {
                 <ImportButton onImport={setVoters} />
                 {voters.length > 0 && (
                   <>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => { clearVoters(); clearImportHistory(); setVoters([]); toast.success('Données supprimées'); }}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Vider
+                    </Button>
                     <Button variant="outline" size="sm" className="gap-1.5" onClick={() => exportVotersToExcel(filtered)}>
                       <Download className="h-3.5 w-3.5" /> Excel
                     </Button>
