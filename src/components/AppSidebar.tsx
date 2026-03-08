@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import armoiriesLogo from '@/assets/armoiries.png';
 import { 
   LayoutDashboard, FileText, BarChart3, PieChart, Map, Copy, GitCompare, 
   ChevronDown, LogOut, History, Moon, Sun, Settings
