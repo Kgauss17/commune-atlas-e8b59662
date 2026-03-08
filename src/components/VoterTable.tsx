@@ -30,11 +30,11 @@ const COLUMNS: { key: keyof Voter; label: string; width: string; mono?: boolean 
   { key: 'bvName', label: 'اسم مكتب التصويت', width: 'w-28', mono: true },
   { key: 'bvAddress', label: 'عنوان مكتب التصويت', width: 'w-36' },
   { key: 'bvLocation', label: 'مكان مكتب التصويت', width: 'w-32' },
-  { key: 'province', label: 'العمالة او الاقليم', width: 'w-32' },
+  { key: 'province', label: 'العمالة او الاقليم', width: 'w-40' },
 ];
 
 // Min total width for all columns to enable proper horizontal scroll
-const MIN_ROW_WIDTH = 1400;
+const MIN_ROW_WIDTH = 1500;
 
 const VoterTable = ({ voters }: VoterTableProps) => {
   const [page, setPage] = useState(0);
@@ -151,7 +151,7 @@ const VoterTable = ({ voters }: VoterTableProps) => {
         <div ref={parentRef} className="overflow-auto" style={{ maxHeight: listHeight + HEADER_HEIGHT }}>
           <div style={{ minWidth: MIN_ROW_WIDTH }}>
             {/* Table Header */}
-            <div className="flex items-center bg-muted/40 border-b border-border sticky top-0 z-[1]" style={{ height: HEADER_HEIGHT }}>
+            <div className="flex items-center bg-card border-b-2 border-border sticky top-0 z-10 shadow-sm" style={{ height: HEADER_HEIGHT }}>
               {COLUMNS.map((col, i) => (
                 <div
                   key={i}
