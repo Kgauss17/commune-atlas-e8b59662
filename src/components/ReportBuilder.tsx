@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileText, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { FileText, Download, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { loadArabicFont, setupArabicFont, reshapeArabic } from '@/lib/pdfGenerator';
+import PdfLayoutEditor, { defaultLayoutConfig, type PdfLayoutConfig } from '@/components/PdfLayoutEditor';
 import type { Voter } from '@/types/voter';
 
 interface ReportBuilderProps {
@@ -48,9 +49,11 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
   const [commune, setCommune] = useState('__all__');
   const [circons, setCircons] = useState('__all__');
   const [showPreview, setShowPreview] = useState(false);
+  const [showLayoutEditor, setShowLayoutEditor] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
   const [generating, setGenerating] = useState(false);
+  const [layoutConfig, setLayoutConfig] = useState<PdfLayoutConfig>(defaultLayoutConfig);
 
   const communes = useMemo(() => [...new Set(voters.map(v => v.commune))].sort(), [voters]);
   const circonscriptions = useMemo(() => [...new Set(voters.map(v => v.circonscription))].sort(), [voters]);
@@ -103,58 +106,89 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
     return pages;
   };
 
+  const hexToRgbArray = (hex: string): [number, number, number] => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    return [r, g, b];
+  };
+
   const generatePDF = async () => {
     if (selectedFields.length === 0) return;
     setGenerating(true);
     try {
       const fontBase64 = await loadArabicFont();
-      const doc = new jsPDF({ orientation: 'landscape' });
+      const cfg = layoutConfig;
+      const doc = new jsPDF({ orientation: cfg.orientation });
       setupArabicFont(doc, fontBase64);
 
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 10;
+      const margin = cfg.margins.left;
+      const marginRight = cfg.margins.right;
 
-      // Dynamic column widths based on selected fields count
-      const colCount = selectedFields.length + 1; // +1 for row number
-      const usableWidth = pageWidth - margin * 2;
+      const colCount = selectedFields.length + 1;
+      const usableWidth = pageWidth - margin - marginRight;
 
-      // --- AdminLTE v3 styled header ---
-      // Top accent bar
-      doc.setFillColor(41, 121, 204);
-      doc.rect(0, 0, pageWidth, 4, 'F');
+      const accentRgb = hexToRgbArray(cfg.headerBgColor);
+      const tableHeadRgb = hexToRgbArray(cfg.accentColor);
 
-      // Header background
-      doc.setFillColor(245, 247, 250);
-      doc.rect(0, 4, pageWidth, 32, 'F');
+      let startY = cfg.margins.top;
 
-      // Title (Arabic)
-      doc.setTextColor(30, 30, 30);
-      doc.setFontSize(16);
-      doc.text(reshapeArabic(titleAr), pageWidth / 2, 18, { align: 'center' });
+      if (cfg.showHeader) {
+        // Top accent bar
+        if (cfg.showAccentBar) {
+          doc.setFillColor(...accentRgb);
+          doc.rect(0, 0, pageWidth, 4, 'F');
+        }
 
-      // Subtitle info
-      doc.setFontSize(9);
-      doc.setTextColor(100, 100, 100);
-      const infoParts: string[] = [];
-      if (electionDate) {
-        infoParts.push(reshapeArabic('يوم الاقتراع') + ': ' + format(electionDate, 'yyyy/MM/dd'));
+        // Header background
+        doc.setFillColor(245, 247, 250);
+        doc.rect(0, cfg.showAccentBar ? 4 : 0, pageWidth, startY - (cfg.showAccentBar ? 4 : 0), 'F');
+
+        // Logo
+        if (cfg.showLogo) {
+          doc.setFillColor(...accentRgb);
+          doc.circle(pageWidth / 2, 16, 6, 'F');
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(8);
+          doc.text('GE', pageWidth / 2, 18, { align: 'center' });
+        }
+
+        // Title
+        doc.setTextColor(30, 30, 30);
+        doc.setFontSize(cfg.headerFontSize);
+        doc.text(reshapeArabic(titleAr), pageWidth / 2, cfg.showLogo ? 30 : 20, { align: 'center' });
+
+        // Subtitle info
+        doc.setFontSize(9);
+        doc.setTextColor(100, 100, 100);
+        const infoParts: string[] = [];
+        if (cfg.headerSubtitle) {
+          infoParts.push(reshapeArabic(cfg.headerSubtitle));
+        }
+        if (cfg.showDate && electionDate) {
+          infoParts.push(reshapeArabic('يوم الاقتراع') + ': ' + format(electionDate, 'yyyy/MM/dd'));
+        }
+        if (commune !== '__all__') {
+          infoParts.push(reshapeArabic('الجماعة') + ': ' + reshapeArabic(commune));
+        }
+        if (circons !== '__all__') {
+          infoParts.push(reshapeArabic('الدائرة') + ': ' + reshapeArabic(circons));
+        }
+        if (cfg.showTotal) {
+          infoParts.push(reshapeArabic('المجموع') + ': ' + filtered.length.toLocaleString());
+        }
+        if (infoParts.length > 0) {
+          const infoY = cfg.showLogo ? 35 : 26;
+          doc.text(infoParts.join('  |  '), pageWidth / 2, infoY, { align: 'center' });
+        }
+
+        // Separator
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(margin, startY - 3, pageWidth - marginRight, startY - 3);
       }
-      if (commune !== '__all__') {
-        infoParts.push(reshapeArabic('الجماعة') + ': ' + reshapeArabic(commune));
-      }
-      if (circons !== '__all__') {
-        infoParts.push(reshapeArabic('الدائرة') + ': ' + reshapeArabic(circons));
-      }
-      infoParts.push(reshapeArabic('المجموع') + ': ' + filtered.length.toLocaleString());
-      doc.text(infoParts.join('  |  '), pageWidth / 2, 28, { align: 'center' });
-
-      // Separator
-      doc.setDrawColor(200, 200, 200);
-      doc.setLineWidth(0.3);
-      doc.line(margin, 38, pageWidth - margin, 38);
-
-      const startY = 42;
 
       // Build header row
       const headerRow = [
@@ -172,11 +206,10 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         }),
       ]);
 
-      // Dynamic column styles - auto-size based on field count
+      // Column styles
       const columnStyles: Record<number, any> = {
         0: { halign: 'center', cellWidth: Math.min(12, usableWidth / colCount) },
       };
-      // For remaining columns, let autoTable handle width dynamically
       for (let i = 1; i <= selectedFields.length; i++) {
         columnStyles[i] = { halign: 'right' };
       }
@@ -185,32 +218,33 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         startY,
         head: [headerRow],
         body: bodyRows,
-        margin: { left: margin, right: margin, top: 42, bottom: 18 },
+        margin: { left: margin, right: marginRight, top: startY, bottom: cfg.margins.bottom },
         styles: {
-          fontSize: 12,
-          cellPadding: colCount > 10 ? 1.5 : 2,
+          fontSize: cfg.fontSize,
+          cellPadding: cfg.tableCellPadding,
           font: 'Amiri',
           halign: 'right',
           overflow: 'linebreak',
         },
         headStyles: {
-          fillColor: [52, 58, 64],
+          fillColor: tableHeadRgb,
           textColor: [255, 255, 255],
           font: 'Amiri',
           fontStyle: 'normal',
           halign: 'right',
-          fontSize: 12,
+          fontSize: cfg.fontSize,
         },
-        alternateRowStyles: { fillColor: [245, 247, 250] },
+        alternateRowStyles: cfg.showAlternateRows ? { fillColor: [245, 247, 250] } : {},
         columnStyles,
         tableWidth: 'auto',
         didDrawPage: (data: any) => {
-          // Re-draw header on subsequent pages
-          if (data.pageNumber > 1) {
-            doc.setFillColor(41, 121, 204);
-            doc.rect(0, 0, pageWidth, 4, 'F');
+          if (data.pageNumber > 1 && cfg.showHeader) {
+            if (cfg.showAccentBar) {
+              doc.setFillColor(...accentRgb);
+              doc.rect(0, 0, pageWidth, 4, 'F');
+            }
             doc.setFillColor(245, 247, 250);
-            doc.rect(0, 4, pageWidth, 8, 'F');
+            doc.rect(0, cfg.showAccentBar ? 4 : 0, pageWidth, 8, 'F');
             doc.setFontSize(9);
             doc.setTextColor(80, 80, 80);
             doc.text(reshapeArabic(titleAr), pageWidth / 2, 10, { align: 'center' });
@@ -219,17 +253,30 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
       });
 
       // Footer on every page
-      const totalPdfPages = (doc as any).internal.getNumberOfPages();
-      for (let i = 1; i <= totalPdfPages; i++) {
-        doc.setPage(i);
-        // Bottom accent bar
-        doc.setFillColor(41, 121, 204);
-        doc.rect(0, pageHeight - 3, pageWidth, 3, 'F');
-        // Footer text
-        doc.setFontSize(7);
-        doc.setTextColor(150, 150, 150);
-        doc.text(reshapeArabic('حالة انتخابية') + ' - ' + new Date().toLocaleDateString('fr-FR'), margin, pageHeight - 7);
-        doc.text(`Page ${i} / ${totalPdfPages}`, pageWidth - margin, pageHeight - 7, { align: 'right' });
+      if (cfg.showFooter) {
+        const totalPdfPages = (doc as any).internal.getNumberOfPages();
+        for (let i = 1; i <= totalPdfPages; i++) {
+          doc.setPage(i);
+          if (cfg.showAccentBar) {
+            doc.setFillColor(...accentRgb);
+            doc.rect(0, pageHeight - 3, pageWidth, 3, 'F');
+          }
+          doc.setFontSize(7);
+          doc.setTextColor(150, 150, 150);
+          doc.text(
+            reshapeArabic(cfg.footerText || 'حالة انتخابية') + ' - ' + new Date().toLocaleDateString('fr-FR'),
+            margin,
+            pageHeight - (cfg.showAccentBar ? 7 : 5)
+          );
+          if (cfg.showPageNumbers) {
+            doc.text(
+              `Page ${i} / ${totalPdfPages}`,
+              pageWidth - marginRight,
+              pageHeight - (cfg.showAccentBar ? 7 : 5),
+              { align: 'right' }
+            );
+          }
+        }
       }
 
       doc.save(`etat_electoral_${new Date().toISOString().slice(0, 10)}.pdf`);
@@ -322,19 +369,35 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           </div>
 
           <div className="flex gap-2">
-            <Button onClick={() => setShowPreview(true)} disabled={selectedFields.length === 0} variant="outline" className="gap-1.5">
+            <Button
+              onClick={() => setShowLayoutEditor(!showLayoutEditor)}
+              variant={showLayoutEditor ? "default" : "outline"}
+              size="sm"
+              className="gap-1.5"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              Mise en page
+            </Button>
+            <Button onClick={() => setShowPreview(true)} disabled={selectedFields.length === 0} variant="outline" size="sm" className="gap-1.5">
               <FileText className="h-3.5 w-3.5" /> Aperçu
             </Button>
           </div>
         </CardContent>
       </Card>
 
+      {/* PDF Layout Editor */}
+      {showLayoutEditor && (
+        <PdfLayoutEditor
+          config={layoutConfig}
+          onChange={setLayoutConfig}
+          titleAr={titleAr}
+        />
+      )}
+
       {/* Report Preview - AdminLTE v3 style */}
       {showPreview && (
         <div id="report-preview">
-          {/* AdminLTE Card */}
           <div className="bg-card rounded shadow-sm border overflow-hidden">
-            {/* Card Header - AdminLTE style */}
             <div className="bg-primary/10 border-b px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-primary" />
@@ -343,7 +406,6 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
               <span className="text-xs text-muted-foreground">{filtered.length} enregistrement(s)</span>
             </div>
 
-            {/* Report Header (Arabic) */}
             <div className="p-6 text-center border-b bg-card" dir="rtl">
               <h2 className="text-2xl font-bold font-[IBM_Plex_Sans_Arabic] text-foreground mb-1">{titleAr}</h2>
               {electionDate && (
@@ -363,7 +425,6 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
               )}
             </div>
 
-            {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -406,7 +467,6 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
               </table>
             </div>
 
-            {/* Pagination Footer - AdminLTE v3 style */}
             <div className="px-4 py-3 border-t bg-muted/10 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span>Afficher</span>
@@ -440,7 +500,6 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
               )}
             </div>
 
-            {/* PDF Generation Button at bottom */}
             <div className="px-4 py-3 border-t bg-muted/5 flex justify-end">
               <Button
                 onClick={generatePDF}
