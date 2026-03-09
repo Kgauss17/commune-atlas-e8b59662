@@ -1,5 +1,7 @@
 {
   "name": "gestion-electorale",
+  "description": "Application de gestion des listes électorales",
+  "author": "Gestion Électorale",
   "private": true,
   "version": "1.0.0",
   "type": "module",
