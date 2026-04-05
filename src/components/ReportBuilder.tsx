@@ -441,12 +441,12 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
               )}
               {commune !== '__all__' && (
                 <p className="text-sm font-[IBM_Plex_Sans_Arabic] text-muted-foreground mt-1">
-                  الجماعة: {commune}
+                  <span className="underline decoration-primary decoration-2 font-semibold text-foreground">الجماعة</span>: {commune}
                 </p>
               )}
               {circons !== '__all__' && (
                 <p className="text-sm font-[IBM_Plex_Sans_Arabic] text-muted-foreground">
-                  الدائرة الانتخابية: {circons}
+                  <span className="underline decoration-primary decoration-2 font-semibold text-foreground">الدائرة الانتخابية</span>: {circons}
                 </p>
               )}
             </div>
