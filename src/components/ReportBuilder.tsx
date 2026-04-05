@@ -181,9 +181,33 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         if (cfg.showTotal) {
           infoParts.push(reshapeArabic('المجموع') + ': ' + filtered.length.toLocaleString());
         }
+        let infoY = cfg.showLogo ? 35 : 26;
         if (infoParts.length > 0) {
-          const infoY = cfg.showLogo ? 35 : 26;
           doc.text(infoParts.join('  |  '), pageWidth / 2, infoY, { align: 'center' });
+          infoY += 5;
+        }
+
+        // Draw underlined commune/circonscription labels
+        if (underlineItems.length > 0) {
+          doc.setFontSize(10);
+          doc.setTextColor(30, 30, 30);
+          underlineItems.forEach((item) => {
+            const labelText = reshapeArabic(item.label);
+            const valueText = reshapeArabic(item.value);
+            const fullText = labelText + ' : ' + valueText;
+            doc.text(fullText, pageWidth / 2, infoY, { align: 'center' });
+            // Draw underline under the label part
+            const labelWidth = doc.getTextWidth(labelText);
+            const fullWidth = doc.getTextWidth(fullText);
+            const textStartX = pageWidth / 2 - fullWidth / 2;
+            const labelStartX = textStartX + fullWidth - labelWidth;
+            doc.setDrawColor(...accentRgb);
+            doc.setLineWidth(0.5);
+            doc.line(labelStartX, infoY + 1, labelStartX + labelWidth, infoY + 1);
+            infoY += 5;
+          });
+          doc.setFontSize(9);
+          doc.setTextColor(100, 100, 100);
         }
 
         // Separator
