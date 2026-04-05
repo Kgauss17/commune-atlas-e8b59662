@@ -170,11 +170,13 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         if (cfg.showDate && electionDate) {
           infoParts.push(reshapeArabic('يوم الاقتراع') + ': ' + format(electionDate, 'yyyy/MM/dd'));
         }
+        // Commune & Circonscription rendered separately with underline
+        const underlineItems: { label: string; value: string }[] = [];
         if (commune !== '__all__') {
-          infoParts.push(reshapeArabic('الجماعة') + ': ' + reshapeArabic(commune));
+          underlineItems.push({ label: 'الجماعة', value: commune });
         }
         if (circons !== '__all__') {
-          infoParts.push(reshapeArabic('الدائرة') + ': ' + reshapeArabic(circons));
+          underlineItems.push({ label: 'الدائرة', value: circons });
         }
         if (cfg.showTotal) {
           infoParts.push(reshapeArabic('المجموع') + ': ' + filtered.length.toLocaleString());
