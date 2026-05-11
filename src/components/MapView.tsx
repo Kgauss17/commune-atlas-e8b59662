@@ -204,11 +204,11 @@ const MapView = ({ voters }: MapViewProps) => {
     [],
   );
 
-  if (!enrichedGeo) {
+  const bounds = useMemoBounds(enrichedGeo);
+
+  if (!enrichedGeo || !bounds) {
     return <Card><CardContent className="p-6 text-sm text-muted-foreground">Chargement de la carte…</CardContent></Card>;
   }
-
-  const bounds = useMemoBounds(enrichedGeo);
 
   return (
     <div className="space-y-4">
