@@ -366,8 +366,9 @@ const KpiCard = ({ label, value }: { label: string; value: number }) => (
 );
 
 // Compute bounds from geojson once
-function useMemoBounds(geo: any): L.LatLngBoundsExpression {
+function useMemoBounds(geo: any): L.LatLngBoundsExpression | null {
   return useMemo(() => {
+    if (!geo) return null;
     const layer = L.geoJSON(geo);
     const b = layer.getBounds();
     return [
