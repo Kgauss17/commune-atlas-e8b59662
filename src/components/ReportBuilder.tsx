@@ -387,10 +387,10 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Commune</Label>
-              <Select value={commune} onValueChange={v => { setCommune(v); setCurrentPage(1); }}>
+              <Select value={commune} onValueChange={v => { setCommune(v); setCircons('__all__'); setBv('__all__'); setCurrentPage(1); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Toutes les communes</SelectItem>
@@ -400,7 +400,7 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Circonscription</Label>
-              <Select value={circons} onValueChange={v => { setCircons(v); setCurrentPage(1); }}>
+              <Select value={circons} onValueChange={v => { setCircons(v); setBv('__all__'); setCurrentPage(1); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Toutes les circonscriptions</SelectItem>
@@ -408,11 +408,68 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Bureau de vote</Label>
+              <Select value={bv} onValueChange={v => { setBv(v); setCurrentPage(1); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tous les bureaux</SelectItem>
+                  {bvs.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Sexe</Label>
+              <Select value={gender} onValueChange={v => { setGender(v); setCurrentPage(1); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tous</SelectItem>
+                  {genders.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Field Selection */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Champs à afficher</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold">
+                Champs à afficher ({selectedFields.length}/{FIELD_OPTIONS.length})
+              </Label>
+              <div className="flex gap-1">
+                <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={selectAllFields}>
+                  <CheckSquare className="h-3 w-3" /> Tout
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={clearFields}>
+                  <Square className="h-3 w-3" /> Aucun
+                </Button>
+              </div>
+            </div>
+
+            {/* Ordered selected fields with reorder controls */}
+            {selectedFields.length > 0 && (
+              <div className="p-2 bg-primary/5 rounded-md border space-y-1">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground px-1">Ordre des colonnes (de gauche à droite)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedFields.map((key, idx) => {
+                    const opt = FIELD_OPTIONS.find(f => f.key === key);
+                    return (
+                      <div key={key} className="flex items-center gap-0.5 bg-card border rounded px-2 py-1 text-xs">
+                        <span className="text-muted-foreground mr-1">{idx + 1}.</span>
+                        <span>{opt?.label || key}</span>
+                        <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" disabled={idx === 0} onClick={() => moveField(key, -1)}>
+                          <ArrowUp className="h-3 w-3" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" disabled={idx === selectedFields.length - 1} onClick={() => moveField(key, 1)}>
+                          <ArrowDown className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-3 bg-muted/20 rounded-md border">
               {FIELD_OPTIONS.map(field => (
                 <label key={field.key} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/30 rounded px-2 py-1.5 transition-colors">
