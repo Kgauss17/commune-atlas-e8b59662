@@ -58,13 +58,28 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
   const [layoutConfig, setLayoutConfig] = useState<PdfLayoutConfig>(defaultLayoutConfig);
 
   const communes = useMemo(() => [...new Set(voters.map(v => v.commune))].sort(), [voters]);
-  const circonscriptions = useMemo(() => [...new Set(voters.map(v => v.circonscription))].sort(), [voters]);
+  const circonscriptions = useMemo(() => {
+    const list = commune === '__all__'
+      ? voters
+      : voters.filter(v => v.commune === commune);
+    return [...new Set(list.map(v => v.circonscription))].sort();
+  }, [voters, commune]);
+  const bvs = useMemo(() => {
+    const list = voters.filter(v =>
+      (commune === '__all__' || v.commune === commune) &&
+      (circons === '__all__' || v.circonscription === circons)
+    );
+    return [...new Set(list.map(v => v.bvName).filter(Boolean))].sort();
+  }, [voters, commune, circons]);
+  const genders = useMemo(() => [...new Set(voters.map(v => v.gender).filter(Boolean))].sort(), [voters]);
 
   const filtered = useMemo(() => {
     return voters
       .filter(v => {
         if (commune !== '__all__' && v.commune !== commune) return false;
         if (circons !== '__all__' && v.circonscription !== circons) return false;
+        if (gender !== '__all__' && v.gender !== gender) return false;
+        if (bv !== '__all__' && v.bvName !== bv) return false;
         return true;
       })
       .sort((a, b) => {
@@ -74,7 +89,7 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         if (d !== 0) return d;
         return (a.orderNumber ?? 0) - (b.orderNumber ?? 0);
       });
-  }, [voters, commune, circons]);
+  }, [voters, commune, circons, gender, bv]);
 
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginatedData = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -84,6 +99,21 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
       prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
     );
   };
+
+  const moveField = (key: keyof Voter, dir: -1 | 1) => {
+    setSelectedFields(prev => {
+      const idx = prev.indexOf(key);
+      if (idx < 0) return prev;
+      const j = idx + dir;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[j]] = [next[j], next[idx]];
+      return next;
+    });
+  };
+
+  const selectAllFields = () => setSelectedFields(FIELD_OPTIONS.map(f => f.key));
+  const clearFields = () => setSelectedFields([]);
 
   const getFieldLabel = (key: keyof Voter) => FIELD_OPTIONS.find(f => f.key === key)?.labelAr || key;
 
