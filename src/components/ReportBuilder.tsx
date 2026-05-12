@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileText, Download, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react';
+import { FileText, Download, ChevronLeft, ChevronRight, Settings2, ArrowUp, ArrowDown, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -48,6 +48,8 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
   const [electionDate, setElectionDate] = useState<Date>();
   const [commune, setCommune] = useState('__all__');
   const [circons, setCircons] = useState('__all__');
+  const [gender, setGender] = useState('__all__');
+  const [bv, setBv] = useState('__all__');
   const [showPreview, setShowPreview] = useState(false);
   const [showLayoutEditor, setShowLayoutEditor] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,13 +58,28 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
   const [layoutConfig, setLayoutConfig] = useState<PdfLayoutConfig>(defaultLayoutConfig);
 
   const communes = useMemo(() => [...new Set(voters.map(v => v.commune))].sort(), [voters]);
-  const circonscriptions = useMemo(() => [...new Set(voters.map(v => v.circonscription))].sort(), [voters]);
+  const circonscriptions = useMemo(() => {
+    const list = commune === '__all__'
+      ? voters
+      : voters.filter(v => v.commune === commune);
+    return [...new Set(list.map(v => v.circonscription))].sort();
+  }, [voters, commune]);
+  const bvs = useMemo(() => {
+    const list = voters.filter(v =>
+      (commune === '__all__' || v.commune === commune) &&
+      (circons === '__all__' || v.circonscription === circons)
+    );
+    return [...new Set(list.map(v => v.bvName).filter(Boolean))].sort();
+  }, [voters, commune, circons]);
+  const genders = useMemo(() => [...new Set(voters.map(v => v.gender).filter(Boolean))].sort(), [voters]);
 
   const filtered = useMemo(() => {
     return voters
       .filter(v => {
         if (commune !== '__all__' && v.commune !== commune) return false;
         if (circons !== '__all__' && v.circonscription !== circons) return false;
+        if (gender !== '__all__' && v.gender !== gender) return false;
+        if (bv !== '__all__' && v.bvName !== bv) return false;
         return true;
       })
       .sort((a, b) => {
@@ -72,7 +89,7 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         if (d !== 0) return d;
         return (a.orderNumber ?? 0) - (b.orderNumber ?? 0);
       });
-  }, [voters, commune, circons]);
+  }, [voters, commune, circons, gender, bv]);
 
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginatedData = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
@@ -82,6 +99,21 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
       prev.includes(key) ? prev.filter(f => f !== key) : [...prev, key]
     );
   };
+
+  const moveField = (key: keyof Voter, dir: -1 | 1) => {
+    setSelectedFields(prev => {
+      const idx = prev.indexOf(key);
+      if (idx < 0) return prev;
+      const j = idx + dir;
+      if (j < 0 || j >= prev.length) return prev;
+      const next = [...prev];
+      [next[idx], next[j]] = [next[j], next[idx]];
+      return next;
+    });
+  };
+
+  const selectAllFields = () => setSelectedFields(FIELD_OPTIONS.map(f => f.key));
+  const clearFields = () => setSelectedFields([]);
 
   const getFieldLabel = (key: keyof Voter) => FIELD_OPTIONS.find(f => f.key === key)?.labelAr || key;
 
@@ -355,10 +387,10 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           </div>
 
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Commune</Label>
-              <Select value={commune} onValueChange={v => { setCommune(v); setCurrentPage(1); }}>
+              <Select value={commune} onValueChange={v => { setCommune(v); setCircons('__all__'); setBv('__all__'); setCurrentPage(1); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Toutes les communes</SelectItem>
@@ -368,7 +400,7 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-semibold">Circonscription</Label>
-              <Select value={circons} onValueChange={v => { setCircons(v); setCurrentPage(1); }}>
+              <Select value={circons} onValueChange={v => { setCircons(v); setBv('__all__'); setCurrentPage(1); }}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__all__">Toutes les circonscriptions</SelectItem>
@@ -376,11 +408,68 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Bureau de vote</Label>
+              <Select value={bv} onValueChange={v => { setBv(v); setCurrentPage(1); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tous les bureaux</SelectItem>
+                  {bvs.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold">Sexe</Label>
+              <Select value={gender} onValueChange={v => { setGender(v); setCurrentPage(1); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Tous</SelectItem>
+                  {genders.map(g => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Field Selection */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-semibold">Champs à afficher</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-semibold">
+                Champs à afficher ({selectedFields.length}/{FIELD_OPTIONS.length})
+              </Label>
+              <div className="flex gap-1">
+                <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={selectAllFields}>
+                  <CheckSquare className="h-3 w-3" /> Tout
+                </Button>
+                <Button type="button" variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={clearFields}>
+                  <Square className="h-3 w-3" /> Aucun
+                </Button>
+              </div>
+            </div>
+
+            {/* Ordered selected fields with reorder controls */}
+            {selectedFields.length > 0 && (
+              <div className="p-2 bg-primary/5 rounded-md border space-y-1">
+                <p className="text-[10px] uppercase tracking-wide text-muted-foreground px-1">Ordre des colonnes (de gauche à droite)</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedFields.map((key, idx) => {
+                    const opt = FIELD_OPTIONS.find(f => f.key === key);
+                    return (
+                      <div key={key} className="flex items-center gap-0.5 bg-card border rounded px-2 py-1 text-xs">
+                        <span className="text-muted-foreground mr-1">{idx + 1}.</span>
+                        <span>{opt?.label || key}</span>
+                        <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" disabled={idx === 0} onClick={() => moveField(key, -1)}>
+                          <ArrowUp className="h-3 w-3" />
+                        </Button>
+                        <Button type="button" variant="ghost" size="sm" className="h-5 w-5 p-0" disabled={idx === selectedFields.length - 1} onClick={() => moveField(key, 1)}>
+                          <ArrowDown className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 p-3 bg-muted/20 rounded-md border">
               {FIELD_OPTIONS.map(field => (
                 <label key={field.key} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/30 rounded px-2 py-1.5 transition-colors">
