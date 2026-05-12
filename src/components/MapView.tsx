@@ -11,16 +11,36 @@ interface MapViewProps {
   voters: Voter[];
 }
 
-type IndicatorKey = 'electeurs' | 'bureaux' | 'circonscriptions';
+type IndicatorKey = 'electeurs' | 'bureaux' | 'circonscriptions' | 'hommes' | 'femmes';
 
 const INDICATORS: Record<IndicatorKey, { label: string; short: string }> = {
   electeurs: { label: "Nombre d'électeurs", short: 'Électeurs' },
   bureaux: { label: 'Bureaux de vote', short: 'Bureaux' },
   circonscriptions: { label: 'Circonscriptions', short: 'Circonscriptions' },
+  hommes: { label: 'Hommes', short: 'Hommes' },
+  femmes: { label: 'Femmes', short: 'Femmes' },
 };
 
 const PALETTE = ['#F4A89A', '#F8C9A8', '#A8D5E2', '#7FCFB5', '#5BA8C9'];
 const CLASS_LABELS = ['Très faible', 'Faible', 'Moyen', 'Élevé', 'Très élevé'];
+
+// Arabic (Excel) → French (GeoJSON nom_commun) mapping
+const AR_TO_FR: Record<string, string> = {
+  'بوعرفة': 'Bouarfa (Mun.)',
+  'فجيج': 'Figuig (Mun.)',
+  'عبو لكحل': 'Abbou Lakhal',
+  'عين الشواطر': 'Ain Chouater',
+  'بني تدجيت': 'Bni Tadjite',
+  'بني كيل': 'Bni Guil',
+  'تندرارة': 'Tendrara',
+  'تالسينت': 'Talsint',
+  'بوعنان': 'Bouanane',
+  'بوشاون': 'Bouchaouene',
+  'بومريم': 'Boumerieme',
+  'معتركة': 'Maatarka',
+  'عين الشعير': 'Ain Chair',
+  'عين الشعر': 'Ain Chair',
+};
 
 const fmt = (v: number) => (v ?? 0).toLocaleString('fr-FR');
 
@@ -36,7 +56,6 @@ function quantileBreaks(values: number[]): number[] {
   return [sorted[0], q(0.2), q(0.4), q(0.6), q(0.8), sorted[sorted.length - 1]];
 }
 
-// Normalize name for matching between voter data and geojson
 function normalize(s: string): string {
   return (s || '')
     .toLowerCase()
@@ -46,6 +65,25 @@ function normalize(s: string): string {
     .replace(/[^a-z0-9]/g, '')
     .trim();
 }
+
+function resolveCommuneFr(raw: string): string {
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  if (AR_TO_FR[trimmed]) return AR_TO_FR[trimmed];
+  // try arabic key by removing punctuation/spaces
+  const arKey = trimmed.replace(/\s+/g, ' ').trim();
+  if (AR_TO_FR[arKey]) return AR_TO_FR[arKey];
+  return trimmed;
+}
+
+const isMale = (g: string) => {
+  const v = (g || '').trim();
+  return v === 'ذكر' || /^m/i.test(v) || /homme/i.test(v) || v === 'H' || v === '1';
+};
+const isFemale = (g: string) => {
+  const v = (g || '').trim();
+  return v === 'أنثى' || /^f/i.test(v) || /femme/i.test(v) || v === '2';
+};
 
 const MapView = ({ voters }: MapViewProps) => {
   const [geo, setGeo] = useState<any | null>(null);
@@ -68,25 +106,40 @@ const MapView = ({ voters }: MapViewProps) => {
     });
   }, []);
 
-  // Aggregate voters by commune (normalized)
+  // Aggregate voters by commune (Arabic → French resolution)
+  // BV count = distinct (circonscription || bvName) keys, matching SQL:
+  // SELECT DISTINCT [الجماعة], [الدائرة الانتخابية], [اسم مكتب التصويت]
   const aggByCommune = useMemo(() => {
-    const map = new Map<string, { electeurs: number; bureaux: Set<string>; circonscriptions: Set<string>; nom_ar?: string }>();
+    const map = new Map<string, {
+      electeurs: number;
+      hommes: number;
+      femmes: number;
+      bureaux: Set<string>;
+      circonscriptions: Set<string>;
+    }>();
     voters.forEach((v) => {
-      const key = normalize(v.commune);
+      const fr = resolveCommuneFr(v.commune);
+      const key = normalize(fr);
       if (!key) return;
-      if (!map.has(key)) map.set(key, { electeurs: 0, bureaux: new Set(), circonscriptions: new Set() });
+      if (!map.has(key)) {
+        map.set(key, {
+          electeurs: 0, hommes: 0, femmes: 0,
+          bureaux: new Set(), circonscriptions: new Set(),
+        });
+      }
       const o = map.get(key)!;
       o.electeurs += 1;
-      if (v.bvName) o.bureaux.add(v.bvName);
+      if (isMale(v.gender)) o.hommes += 1;
+      else if (isFemale(v.gender)) o.femmes += 1;
+      if (v.bvName) o.bureaux.add(`${v.circonscription || ''}||${v.bvName}`);
       if (v.circonscription) o.circonscriptions.add(v.circonscription);
     });
     return map;
   }, [voters]);
 
-  // Enrich features with indicator values
   const enrichedGeo = useMemo(() => {
     if (!geo) return null;
-    const clone = {
+    return {
       ...geo,
       features: geo.features.map((f: any) => {
         const name = f.properties.nom_commun;
@@ -101,11 +154,12 @@ const MapView = ({ voters }: MapViewProps) => {
             electeurs: local ? local.electeurs : fallback.electeurs ?? 0,
             bureaux: local ? local.bureaux.size : fallback.bureaux ?? 0,
             circonscriptions: local ? local.circonscriptions.size : fallback.circonscriptions ?? 0,
+            hommes: local ? local.hommes : 0,
+            femmes: local ? local.femmes : 0,
           },
         };
       }),
     };
-    return clone;
   }, [geo, aggByCommune, elections]);
 
   const breaks = useMemo(() => {
@@ -129,14 +183,13 @@ const MapView = ({ voters }: MapViewProps) => {
     const dim = activeClass != null && c !== activeClass;
     return {
       color: '#1e293b',
-      weight: selected === f.properties.nom_commun ? 3 : 1,
+      weight: selected === f.properties.nom_commun ? 2 : 1,
       fillColor: colorFor(v),
       fillOpacity: dim ? 0.15 : 0.78,
       opacity: dim ? 0.4 : 1,
     };
   };
 
-  // Re-style on changes
   useEffect(() => {
     if (geoLayerRef.current) {
       geoLayerRef.current.setStyle(styleFeature as any);
@@ -162,6 +215,8 @@ const MapView = ({ voters }: MapViewProps) => {
         .bindPopup(
           `<div style="font-weight:600;margin-bottom:4px">${p.nom_commun} <span style="color:#64748b;font-weight:400;font-size:12px">${p.nom_ar || ''}</span></div>
           <div style="display:flex;justify-content:space-between;gap:12px"><span>Électeurs</span><b>${fmt(p.electeurs)}</b></div>
+          <div style="display:flex;justify-content:space-between;gap:12px"><span>Hommes</span><b>${fmt(p.hommes)}</b></div>
+          <div style="display:flex;justify-content:space-between;gap:12px"><span>Femmes</span><b>${fmt(p.femmes)}</b></div>
           <div style="display:flex;justify-content:space-between;gap:12px"><span>Bureaux</span><b>${fmt(p.bureaux)}</b></div>
           <div style="display:flex;justify-content:space-between;gap:12px"><span>Circonscriptions</span><b>${fmt(p.circonscriptions)}</b></div>`,
         )
@@ -169,14 +224,15 @@ const MapView = ({ voters }: MapViewProps) => {
     });
   };
 
-  // KPIs
   const totals = useMemo(() => {
-    if (!enrichedGeo) return { electeurs: 0, bureaux: 0, circonscriptions: 0, communes: 0 };
+    if (!enrichedGeo) return { electeurs: 0, bureaux: 0, circonscriptions: 0, communes: 0, hommes: 0, femmes: 0 };
     const sum = (k: IndicatorKey) => enrichedGeo.features.reduce((s: number, f: any) => s + (f.properties[k] || 0), 0);
     return {
       electeurs: sum('electeurs'),
       bureaux: sum('bureaux'),
       circonscriptions: sum('circonscriptions'),
+      hommes: sum('hommes'),
+      femmes: sum('femmes'),
       communes: enrichedGeo.features.length,
     };
   }, [enrichedGeo]);
@@ -213,29 +269,36 @@ const MapView = ({ voters }: MapViewProps) => {
   return (
     <div className="space-y-4">
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <KpiCard label="Communes" value={totals.communes} />
         <KpiCard label="Électeurs" value={totals.electeurs} />
-        <KpiCard label="Bureaux de vote" value={totals.bureaux} />
+        <KpiCard label="Hommes" value={totals.hommes} />
+        <KpiCard label="Femmes" value={totals.femmes} />
+        <KpiCard label="Bureaux" value={totals.bureaux} />
         <KpiCard label="Circonscriptions" value={totals.circonscriptions} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* Map */}
         <Card className="lg:col-span-2">
-          <CardHeader className="pb-2 flex flex-row items-center justify-between gap-2">
+          <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Carte des communes — Province de Figuig</CardTitle>
-            <Select value={indicator} onValueChange={(v) => { setIndicator(v as IndicatorKey); setActiveClass(null); }}>
-              <SelectTrigger className="w-[200px] h-8 text-xs"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {Object.entries(INDICATORS).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </CardHeader>
           <CardContent>
-            <div className="h-[520px] rounded-md overflow-hidden border">
+            <div className="relative h-[520px] rounded-md overflow-hidden border">
+              {/* Indicator selector floating inside the map */}
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000]">
+                <Select value={indicator} onValueChange={(v) => { setIndicator(v as IndicatorKey); setActiveClass(null); }}>
+                  <SelectTrigger className="w-[220px] h-9 text-xs bg-background/95 backdrop-blur shadow-md">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="z-[1100]">
+                    {Object.entries(INDICATORS).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <MapContainer bounds={bounds} style={{ height: '100%', width: '100%' }} scrollWheelZoom>
                 <LayersControl position="topright">
                   <LayersControl.BaseLayer checked name="Relief HD">
@@ -274,14 +337,13 @@ const MapView = ({ voters }: MapViewProps) => {
                   const [lng, lat] = f.geometry.coordinates;
                   return (
                     <Marker key={i} position={[lat, lng]} icon={chefLieuIcon}>
-                      <LTooltip>{f.properties?.nom_commun || f.properties?.name || 'Chef-lieu'}</LTooltip>
+                      <LTooltip>{f.properties?.nom_commun || f.properties?.Name || 'Chef-lieu'}</LTooltip>
                     </Marker>
                   );
                 })}
               </MapContainer>
             </div>
 
-            {/* Legend */}
             <div className="mt-3">
               <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
                 {INDICATORS[indicator].label}
@@ -313,7 +375,6 @@ const MapView = ({ voters }: MapViewProps) => {
           </CardContent>
         </Card>
 
-        {/* Ranking panel */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-semibold">Classement — {INDICATORS[indicator].short}</CardTitle>
@@ -365,7 +426,6 @@ const KpiCard = ({ label, value }: { label: string; value: number }) => (
   </Card>
 );
 
-// Compute bounds from geojson once
 function useMemoBounds(geo: any): L.LatLngBoundsExpression | null {
   return useMemo(() => {
     if (!geo) return null;
