@@ -48,6 +48,8 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
   const [electionDate, setElectionDate] = useState<Date>();
   const [commune, setCommune] = useState('__all__');
   const [circons, setCircons] = useState('__all__');
+  const [gender, setGender] = useState('__all__');
+  const [bv, setBv] = useState('__all__');
   const [showPreview, setShowPreview] = useState(false);
   const [showLayoutEditor, setShowLayoutEditor] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
