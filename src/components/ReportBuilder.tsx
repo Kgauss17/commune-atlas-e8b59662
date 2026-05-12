@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { FileText, Download, ChevronLeft, ChevronRight, Settings2 } from 'lucide-react';
+import { FileText, Download, ChevronLeft, ChevronRight, Settings2, ArrowUp, ArrowDown, CheckSquare, Square } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
