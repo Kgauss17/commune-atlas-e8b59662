@@ -24,7 +24,9 @@ export function setupArabicFont(doc: jsPDF, fontBase64: string) {
   doc.addFont('Amiri-Regular.ttf', 'Amiri', 'normal');
   doc.setFont('Amiri');
   doc.setLanguage('ar');
-  (doc as any).setR2L(true);
+  // NOTE: ne pas activer setR2L(true) — reshapeArabic() effectue déjà
+  // le reshaping + l'inversion manuelle des caractères. Activer setR2L
+  // provoquerait une double inversion et un texte arabe corrompu.
 }
 
 // Arabic letter forms mapping for reshaping
