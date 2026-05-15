@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { loadArabicFont, setupArabicFont, reshapeArabic } from '@/lib/pdfGenerator';
+import { ensureAmiriLoaded, drawArabicText, arabicAutoTableHooks, isArabic } from '@/lib/arabicRenderer';
 import PdfLayoutEditor, { defaultLayoutConfig, type PdfLayoutConfig } from '@/components/PdfLayoutEditor';
 import type { Voter } from '@/types/voter';
 
