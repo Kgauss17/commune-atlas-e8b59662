@@ -192,17 +192,21 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         // Title
         doc.setTextColor(30, 30, 30);
         doc.setFontSize(cfg.headerFontSize);
-        doc.text(reshapeArabic(titleAr), pageWidth / 2, cfg.showLogo ? 30 : 20, { align: 'center' });
+        if (isArabic(titleAr)) {
+          drawArabicText(doc, titleAr, pageWidth / 2, cfg.showLogo ? 30 : 20, { align: 'center', fontSizePt: cfg.headerFontSize, bold: true });
+        } else {
+          doc.text(titleAr, pageWidth / 2, cfg.showLogo ? 30 : 20, { align: 'center' });
+        }
 
         // Subtitle info
         doc.setFontSize(9);
         doc.setTextColor(100, 100, 100);
         const infoParts: string[] = [];
         if (cfg.headerSubtitle) {
-          infoParts.push(reshapeArabic(cfg.headerSubtitle));
+          infoParts.push(cfg.headerSubtitle);
         }
         if (cfg.showDate && electionDate) {
-          infoParts.push(reshapeArabic('يوم الاقتراع') + ': ' + format(electionDate, 'yyyy/MM/dd'));
+          infoParts.push('يوم الاقتراع' + ': ' + format(electionDate, 'yyyy/MM/dd'));
         }
         // Commune & Circonscription rendered separately with underline
         const underlineItems: { label: string; value: string }[] = [];
@@ -213,11 +217,16 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           underlineItems.push({ label: 'الدائرة', value: circons });
         }
         if (cfg.showTotal) {
-          infoParts.push(reshapeArabic('المجموع') + ': ' + filtered.length.toLocaleString());
+          infoParts.push('المجموع' + ': ' + filtered.length.toLocaleString());
         }
         let infoY = cfg.showLogo ? 35 : 26;
         if (infoParts.length > 0) {
-          doc.text(infoParts.join('  |  '), pageWidth / 2, infoY, { align: 'center' });
+          const joined = infoParts.join('  |  ');
+          if (isArabic(joined)) {
+            drawArabicText(doc, joined, pageWidth / 2, infoY, { align: 'center', fontSizePt: 9, color: '#646464' });
+          } else {
+            doc.text(joined, pageWidth / 2, infoY, { align: 'center' });
+          }
           infoY += 5;
         }
 
@@ -226,18 +235,15 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           doc.setFontSize(10);
           doc.setTextColor(30, 30, 30);
           underlineItems.forEach((item) => {
-            const labelText = reshapeArabic(item.label);
-            const valueText = reshapeArabic(item.value);
-            const fullText = labelText + ' : ' + valueText;
-            doc.text(fullText, pageWidth / 2, infoY, { align: 'center' });
-            // Draw underline under the label part
-            const labelWidth = doc.getTextWidth(labelText);
-            const fullWidth = doc.getTextWidth(fullText);
-            const textStartX = pageWidth / 2 - fullWidth / 2;
-            const labelStartX = textStartX + fullWidth - labelWidth;
+            const fullText = item.label + ' : ' + item.value;
+            const drawn = drawArabicText(doc, fullText, pageWidth / 2, infoY, { align: 'center', fontSizePt: 10 });
+            // Underline approximative sous la portion "label" (à droite du texte centré, en RTL)
+            const labelRatio = item.label.length / fullText.length;
+            const labelW = drawn.w * labelRatio;
+            const labelStartX = drawn.x + drawn.w - labelW;
             doc.setDrawColor(...accentRgb);
             doc.setLineWidth(0.5);
-            doc.line(labelStartX, infoY + 1, labelStartX + labelWidth, infoY + 1);
+            doc.line(labelStartX, infoY + 1, labelStartX + labelW, infoY + 1);
             infoY += 5;
           });
           doc.setFontSize(9);
