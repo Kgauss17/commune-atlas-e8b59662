@@ -141,4 +141,23 @@ export function arabicAutoTableHooks(doc: jsPDF) {
       const img = renderArabicToImage(ar, fontPx, color, bold);
 
       const padRaw = data.cell.styles.cellPadding;
-      const pad = typeof padRaw === '
+      const pad = typeof padRaw === 'number' ? padRaw : 1.5;
+      const maxW = Math.max(1, data.cell.width - pad * 2);
+      const maxH = Math.max(1, data.cell.height - pad * 2);
+
+      let drawH = Math.min((fontPt * 25.4) / 72 * 1.15, maxH);
+      let drawW = (img.w / img.h) * drawH;
+      if (drawW > maxW) {
+        drawW = maxW;
+        drawH = (img.h / img.w) * drawW;
+      }
+
+      const halign = data.cell.styles.halign || 'left';
+      let dx = data.cell.x + pad;
+      if (halign === 'right') dx = data.cell.x + data.cell.width - drawW - pad;
+      else if (halign === 'center') dx = data.cell.x + (data.cell.width - drawW) / 2;
+      const dy = data.cell.y + (data.cell.height - drawH) / 2;
+      doc.addImage(img.url, 'PNG', dx, dy, drawW, drawH);
+    },
+  };
+}
