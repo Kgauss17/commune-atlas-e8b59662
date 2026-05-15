@@ -15,6 +15,7 @@ import { toast } from 'sonner';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { loadArabicFont, setupArabicFont, reshapeArabic } from '@/lib/pdfGenerator';
+import { ensureAmiriLoaded, drawArabicText, arabicAutoTableHooks, isArabic } from '@/lib/arabicRenderer';
 import PdfLayoutEditor, { defaultLayoutConfig, type PdfLayoutConfig } from '@/components/PdfLayoutEditor';
 import type { Voter } from '@/types/voter';
 
@@ -149,6 +150,7 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
     if (selectedFields.length === 0) return;
     setGenerating(true);
     try {
+      await ensureAmiriLoaded();
       const fontBase64 = await loadArabicFont();
       const cfg = layoutConfig;
       const doc = new jsPDF({ orientation: cfg.orientation });
@@ -190,17 +192,21 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         // Title
         doc.setTextColor(30, 30, 30);
         doc.setFontSize(cfg.headerFontSize);
-        doc.text(reshapeArabic(titleAr), pageWidth / 2, cfg.showLogo ? 30 : 20, { align: 'center' });
+        if (isArabic(titleAr)) {
+          drawArabicText(doc, titleAr, pageWidth / 2, cfg.showLogo ? 30 : 20, { align: 'center', fontSizePt: cfg.headerFontSize, bold: true });
+        } else {
+          doc.text(titleAr, pageWidth / 2, cfg.showLogo ? 30 : 20, { align: 'center' });
+        }
 
         // Subtitle info
         doc.setFontSize(9);
         doc.setTextColor(100, 100, 100);
         const infoParts: string[] = [];
         if (cfg.headerSubtitle) {
-          infoParts.push(reshapeArabic(cfg.headerSubtitle));
+          infoParts.push(cfg.headerSubtitle);
         }
         if (cfg.showDate && electionDate) {
-          infoParts.push(reshapeArabic('يوم الاقتراع') + ': ' + format(electionDate, 'yyyy/MM/dd'));
+          infoParts.push('يوم الاقتراع' + ': ' + format(electionDate, 'yyyy/MM/dd'));
         }
         // Commune & Circonscription rendered separately with underline
         const underlineItems: { label: string; value: string }[] = [];
@@ -211,11 +217,16 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           underlineItems.push({ label: 'الدائرة', value: circons });
         }
         if (cfg.showTotal) {
-          infoParts.push(reshapeArabic('المجموع') + ': ' + filtered.length.toLocaleString());
+          infoParts.push('المجموع' + ': ' + filtered.length.toLocaleString());
         }
         let infoY = cfg.showLogo ? 35 : 26;
         if (infoParts.length > 0) {
-          doc.text(infoParts.join('  |  '), pageWidth / 2, infoY, { align: 'center' });
+          const joined = infoParts.join('  |  ');
+          if (isArabic(joined)) {
+            drawArabicText(doc, joined, pageWidth / 2, infoY, { align: 'center', fontSizePt: 9, color: '#646464' });
+          } else {
+            doc.text(joined, pageWidth / 2, infoY, { align: 'center' });
+          }
           infoY += 5;
         }
 
@@ -224,18 +235,15 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           doc.setFontSize(10);
           doc.setTextColor(30, 30, 30);
           underlineItems.forEach((item) => {
-            const labelText = reshapeArabic(item.label);
-            const valueText = reshapeArabic(item.value);
-            const fullText = labelText + ' : ' + valueText;
-            doc.text(fullText, pageWidth / 2, infoY, { align: 'center' });
-            // Draw underline under the label part
-            const labelWidth = doc.getTextWidth(labelText);
-            const fullWidth = doc.getTextWidth(fullText);
-            const textStartX = pageWidth / 2 - fullWidth / 2;
-            const labelStartX = textStartX + fullWidth - labelWidth;
+            const fullText = item.label + ' : ' + item.value;
+            const drawn = drawArabicText(doc, fullText, pageWidth / 2, infoY, { align: 'center', fontSizePt: 10 });
+            // Underline approximative sous la portion "label" (à droite du texte centré, en RTL)
+            const labelRatio = item.label.length / fullText.length;
+            const labelW = drawn.w * labelRatio;
+            const labelStartX = drawn.x + drawn.w - labelW;
             doc.setDrawColor(...accentRgb);
             doc.setLineWidth(0.5);
-            doc.line(labelStartX, infoY + 1, labelStartX + labelWidth, infoY + 1);
+            doc.line(labelStartX, infoY + 1, labelStartX + labelW, infoY + 1);
             infoY += 5;
           });
           doc.setFontSize(9);
@@ -248,20 +256,16 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         doc.line(margin, startY - 3, pageWidth - marginRight, startY - 3);
       }
 
-      // Build header row
+      // Build header row (no reshape — handled by canvas hooks)
       const headerRow = [
         '#',
-        ...selectedFields.map(key => reshapeArabic(getFieldLabel(key)))
+        ...selectedFields.map(key => getFieldLabel(key))
       ];
 
       // Build body rows
       const bodyRows = filtered.map((voter, idx) => [
         idx + 1,
-        ...selectedFields.map(key => {
-          const val = voter[key];
-          const str = String(val ?? '');
-          return /[\u0600-\u06FF]/.test(str) ? reshapeArabic(str) : str;
-        }),
+        ...selectedFields.map(key => String(voter[key] ?? '')),
       ]);
 
       // Column styles
@@ -271,6 +275,8 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
       for (let i = 1; i <= selectedFields.length; i++) {
         columnStyles[i] = { halign: 'right' };
       }
+
+      const arabicHooks = arabicAutoTableHooks(doc);
 
       autoTable(doc, {
         startY,
@@ -289,12 +295,14 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           textColor: [255, 255, 255],
           font: 'Amiri',
           fontStyle: 'normal',
-          halign: 'right',
+          halign: 'center',
           fontSize: cfg.fontSize,
         },
         alternateRowStyles: cfg.showAlternateRows ? { fillColor: [245, 247, 250] } : {},
         columnStyles,
         tableWidth: 'auto',
+        didParseCell: arabicHooks.didParseCell,
+        didDrawCell: arabicHooks.didDrawCell,
         didDrawPage: (data: any) => {
           if (data.pageNumber > 1 && cfg.showHeader) {
             if (cfg.showAccentBar) {
@@ -305,7 +313,11 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
             doc.rect(0, cfg.showAccentBar ? 4 : 0, pageWidth, 8, 'F');
             doc.setFontSize(9);
             doc.setTextColor(80, 80, 80);
-            doc.text(reshapeArabic(titleAr), pageWidth / 2, 10, { align: 'center' });
+            if (isArabic(titleAr)) {
+              drawArabicText(doc, titleAr, pageWidth / 2, 10, { align: 'center', fontSizePt: 9, color: '#505050' });
+            } else {
+              doc.text(titleAr, pageWidth / 2, 10, { align: 'center' });
+            }
           }
         },
       });
@@ -321,11 +333,12 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           }
           doc.setFontSize(7);
           doc.setTextColor(150, 150, 150);
-          doc.text(
-            reshapeArabic(cfg.footerText || 'حالة انتخابية') + ' - ' + new Date().toLocaleDateString('fr-FR'),
-            margin,
-            pageHeight - (cfg.showAccentBar ? 7 : 5)
-          );
+          const footerText = (cfg.footerText || 'حالة انتخابية') + ' - ' + new Date().toLocaleDateString('fr-FR');
+          if (isArabic(footerText)) {
+            drawArabicText(doc, footerText, margin, pageHeight - (cfg.showAccentBar ? 7 : 5), { fontSizePt: 7, color: '#969696' });
+          } else {
+            doc.text(footerText, margin, pageHeight - (cfg.showAccentBar ? 7 : 5));
+          }
           if (cfg.showPageNumbers) {
             doc.text(
               `Page ${i} / ${totalPdfPages}`,
