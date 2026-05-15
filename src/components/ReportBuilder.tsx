@@ -256,20 +256,16 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
         doc.line(margin, startY - 3, pageWidth - marginRight, startY - 3);
       }
 
-      // Build header row
+      // Build header row (no reshape — handled by canvas hooks)
       const headerRow = [
         '#',
-        ...selectedFields.map(key => reshapeArabic(getFieldLabel(key)))
+        ...selectedFields.map(key => getFieldLabel(key))
       ];
 
       // Build body rows
       const bodyRows = filtered.map((voter, idx) => [
         idx + 1,
-        ...selectedFields.map(key => {
-          const val = voter[key];
-          const str = String(val ?? '');
-          return /[\u0600-\u06FF]/.test(str) ? reshapeArabic(str) : str;
-        }),
+        ...selectedFields.map(key => String(voter[key] ?? '')),
       ]);
 
       // Column styles
@@ -279,6 +275,8 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
       for (let i = 1; i <= selectedFields.length; i++) {
         columnStyles[i] = { halign: 'right' };
       }
+
+      const arabicHooks = arabicAutoTableHooks(doc);
 
       autoTable(doc, {
         startY,
@@ -297,12 +295,14 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           textColor: [255, 255, 255],
           font: 'Amiri',
           fontStyle: 'normal',
-          halign: 'right',
+          halign: 'center',
           fontSize: cfg.fontSize,
         },
         alternateRowStyles: cfg.showAlternateRows ? { fillColor: [245, 247, 250] } : {},
         columnStyles,
         tableWidth: 'auto',
+        didParseCell: arabicHooks.didParseCell,
+        didDrawCell: arabicHooks.didDrawCell,
         didDrawPage: (data: any) => {
           if (data.pageNumber > 1 && cfg.showHeader) {
             if (cfg.showAccentBar) {
@@ -313,7 +313,11 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
             doc.rect(0, cfg.showAccentBar ? 4 : 0, pageWidth, 8, 'F');
             doc.setFontSize(9);
             doc.setTextColor(80, 80, 80);
-            doc.text(reshapeArabic(titleAr), pageWidth / 2, 10, { align: 'center' });
+            if (isArabic(titleAr)) {
+              drawArabicText(doc, titleAr, pageWidth / 2, 10, { align: 'center', fontSizePt: 9, color: '#505050' });
+            } else {
+              doc.text(titleAr, pageWidth / 2, 10, { align: 'center' });
+            }
           }
         },
       });
@@ -329,11 +333,12 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
           }
           doc.setFontSize(7);
           doc.setTextColor(150, 150, 150);
-          doc.text(
-            reshapeArabic(cfg.footerText || 'حالة انتخابية') + ' - ' + new Date().toLocaleDateString('fr-FR'),
-            margin,
-            pageHeight - (cfg.showAccentBar ? 7 : 5)
-          );
+          const footerText = (cfg.footerText || 'حالة انتخابية') + ' - ' + new Date().toLocaleDateString('fr-FR');
+          if (isArabic(footerText)) {
+            drawArabicText(doc, footerText, margin, pageHeight - (cfg.showAccentBar ? 7 : 5), { fontSizePt: 7, color: '#969696' });
+          } else {
+            doc.text(footerText, margin, pageHeight - (cfg.showAccentBar ? 7 : 5));
+          }
           if (cfg.showPageNumbers) {
             doc.text(
               `Page ${i} / ${totalPdfPages}`,
