@@ -82,13 +82,12 @@ export function drawArabicText(
   x: number,
   y: number,
   opts: DrawTextOpts = {},
-) {
-  if (!text) return;
+): { x: number; y: number; w: number; h: number } {
+  if (!text) return { x, y, w: 0, h: 0 };
   const fontPt = opts.fontSizePt ?? doc.getFontSize();
   const fontPx = Math.max(12, Math.round(fontPt * 2));
   const img = renderArabicToImage(text, fontPx, opts.color ?? '#000', opts.bold);
 
-  // Hauteur cible en mm proportionnelle au fontSize PDF (1pt = 25.4/72 mm)
   let drawH = (fontPt * 25.4) / 72 * 1.2;
   let drawW = (img.w / img.h) * drawH;
 
@@ -101,9 +100,9 @@ export function drawArabicText(
   if (opts.align === 'center') dx = x - drawW / 2;
   else if (opts.align === 'right') dx = x - drawW;
 
-  // y représente plutôt la baseline ; on cale le centre image légèrement au-dessus
   const dy = y - drawH * 0.78;
   doc.addImage(img.url, 'PNG', dx, dy, drawW, drawH);
+  return { x: dx, y: dy, w: drawW, h: drawH };
 }
 
 function rgbArrToHex(arr: any): string {
