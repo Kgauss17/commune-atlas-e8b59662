@@ -150,6 +150,7 @@ const ReportBuilder = ({ voters }: ReportBuilderProps) => {
     if (selectedFields.length === 0) return;
     setGenerating(true);
     try {
+      await ensureAmiriLoaded();
       const fontBase64 = await loadArabicFont();
       const cfg = layoutConfig;
       const doc = new jsPDF({ orientation: cfg.orientation });
