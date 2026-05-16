@@ -29,8 +29,15 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: 'hsl(220, 25%, 14%)' }}>
-      <div className="w-full max-w-sm">
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: '#000' }}>
+      <iframe
+        src="./login-map.html"
+        title="map-background"
+        aria-hidden="true"
+        className="absolute inset-0 w-full h-full border-0 pointer-events-none"
+      />
+      <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+      <div className="w-full max-w-sm relative z-10">
         {/* Logo */}
         <div className="text-center mb-6 flex flex-col items-center">
           <img src={armoiriesLogo} alt="المملكة المغربية" className="h-20 w-auto mb-3" />
