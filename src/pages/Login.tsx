@@ -31,7 +31,7 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={{ background: '#000' }}>
       <iframe
-        src="/login-map.html"
+        src="./login-map.html"
         title="map-background"
         aria-hidden="true"
         className="absolute inset-0 w-full h-full border-0 pointer-events-none"
